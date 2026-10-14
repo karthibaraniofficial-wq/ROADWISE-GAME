@@ -23,6 +23,7 @@
 | **M10: Multi-Slot Saves & Security Rules** | Multi-slot manager (`users/{uid}/gameSaves/{saveId}`), negative balance prevention, Firestore security rules | 🟢 Completed | `firestore.rules` deployed, slot create/rename/load/delete, V1 migration |
 | **M11: Controls & Physics Overhaul** | Desktop W/A/S/D & arrows with scroll prevention, blur release, mobile Pointer Events with large targets, lateral drift dampening | 🟢 Completed | `VehiclePhysics.ts` arcade grip, distinct braking, reverse orientation, `TouchControls.tsx` |
 | **M12: Player Dashboard & Premium HUD** | Full-screen career dashboard, fleet cards, overhauled glass HUD, circular speed limit badge, non-overlapping minimap | 🟢 Completed | `PlayerDashboard.tsx`, `HUD.tsx`, `Minimap.tsx`, `SettingsModal.tsx` |
+| **M13: 3D City World Transformation** | Procedural curved road network, CatmullRom splines, 7 distinct Indian districts, A* legal routing, curved traffic AI, elevated flyover, roundabout | 🟢 Completed | `RoadNetwork.ts`, `RoadGeometry.ts`, `Districts.ts`, `EnvironmentAssets.ts`, 15/15 unit tests passing (`npm test`), 0-error build |
 
 ---
 
@@ -53,6 +54,14 @@
     - Redesigned `src/components/HUD.tsx` with glass panels, circular Indian speed limit badge, digital speedometer, and non-blocking notifications.
     - Positioned `src/components/Minimap.tsx` at top-right with dashed route navigation to destination.
   - **Automated Verification**:
-    - All 12 unit tests pass cleanly in Node.js test runner (`npm test`).
-    - Production build compiles in 2.8s (`npm run build`) producing `dist/bundle.js` and `dist/bundle.css`.
+    - All 15 unit tests pass cleanly in Node.js test runner (`npm test`).
+    - Production build compiles cleanly (`npm run build`) producing `dist/bundle.js` (1.5MB) and `dist/bundle.css`.
     - Dev server running on `http://localhost:5173/` verified serving HTTP 200.
+  - **3D City World Transformation (Antigravity + Gemini 3.8 Flash)**:
+    - Built interconnected road network graph (`src/engine/world/RoadNetwork.ts`) with 22 nodes, 24 edges, CatmullRom splines, speed limits, and A* shortest-path routing algorithm.
+    - Implemented procedural 3D road sweep geometry (`src/engine/world/RoadGeometry.ts`) with continuous road ribbons, curbs, sidewalks, multi-lane dividers, stop lines, zebra crossings, elevated flyover/bridge with support pillars and guardrails, and roundabout center island.
+    - Generated 7 distinct Indian city districts (`src/engine/world/Districts.ts`): Commercial Market, Residential Colony, IT Park, School Zone, Hospital District, Ring Road Highway, Heritage Quarter.
+    - Added modular environment assets (`src/engine/world/EnvironmentAssets.ts`): 3D streetlights with emissive lanterns, Indian neem/banyan trees, bus stop shelters, roadside parked two-wheelers, traffic regulatory signs, and construction barricades.
+    - Overhauled traffic AI (`src/engine/TrafficAI.ts`) to travel along curved road splines, adhere to Left-Hand-Traffic lane offsets, and stop at red signals.
+    - Upgraded 2D canvas minimap (`src/components/Minimap.tsx`) to render actual curved road network geometry and live A* route guidance waypoints.
+    - Verified all 10 delivery missions remain fully reachable on the connected road graph.

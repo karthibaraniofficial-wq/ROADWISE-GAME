@@ -1,0 +1,85 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // Helper functions
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+
+    function isOwner(userId) {
+      return isAuthenticated() && request.auth.uid == userId;
+    }
+
+    function isReasonableSize() {
+      // Prevent massive payloads exceeding 200KB per document
+      return request.resource.size() < 200 * 1024;
+    }
+
+    function isValidTimestamp(val) {
+      return val is timestamp || val is string;
+    }
+
+    // User Profile Document: users/{userId}
+    match /users/{userId} {
+      allow read: if isOwner(userId);
+      allow create: if isOwner(userId)
+                    && isReasonableSize()
+                    && request.resource.data.keys().hasAll(['displayName', 'email', 'createdAt'])
+                    && request.resource.data.email is string
+                    && request.resource.data.displayName is string
+                    && (!('totalCurrency' in request.resource.data) || request.resource.data.totalCurrency >= 0)
+                    && (!('playerLevel' in request.resource.data) || request.resource.data.playerLevel >= 1);
+
+      allow update: if isOwner(userId)
+                    && isReasonableSize()
+                    && (!('totalCurrency' in request.resource.data) || request.resource.data.totalCurrency >= 0)
+                    && (!('safetyRating' in request.resource.data) || (request.resource.data.safetyRating >= 0 && request.resource.data.safetyRating <= 100))
+                    && (!('playerLevel' in request.resource.data) || request.resource.data.playerLevel >= 1);
+
+      allow delete: if isOwner(userId);
+
+      // Multi-Slot Game Saves: users/{userId}/gameSaves/{saveId}
+      match /gameSaves/{saveId} {
+        allow read: if isOwner(userId);
+        allow create: if isOwner(userId)
+                      && isReasonableSize()
+                      && request.resource.data.keys().hasAll(['saveName', 'schemaVersion', 'createdAt'])
+                      && request.resource.data.saveName is string
+                      && request.resource.data.saveName.size() <= 40
+                      && (!('currency' in request.resource.data) || request.resource.data.currency >= 0)
+                      && (!('currencyINR' in request.resource.data) || request.resource.data.currencyINR >= 0)
+                      && (!('safetyRating' in request.resource.data) || (request.resource.data.safetyRating >= 0 && request.resource.data.safetyRating <= 100))
+                      && (!('safetyScore' in request.resource.data) || (request.resource.data.safetyScore >= 0 && request.resource.data.safetyScore <= 100));
+
+        allow update: if isOwner(userId)
+                      && isReasonableSize()
+                      && request.resource.data.saveName is string
+                      && request.resource.data.saveName.size() <= 40
+                      && (!('currency' in request.resource.data) || request.resource.data.currency >= 0)
+                      && (!('currencyINR' in request.resource.data) || request.resource.data.currencyINR >= 0)
+                      && (!('safetyRating' in request.resource.data) || (request.resource.data.safetyRating >= 0 && request.resource.data.safetyRating <= 100))
+                      && (!('safetyScore' in request.resource.data) || (request.resource.data.safetyScore >= 0 && request.resource.data.safetyScore <= 100));
+
+        allow delete: if isOwner(userId);
+      }
+
+      // Mission Delivery History: users/{userId}/missionHistory/{missionId}
+      match /missionHistory/{missionId} {
+        allow read: if isOwner(userId);
+        allow create: if isOwner(userId)
+                      && isReasonableSize()
+                      && request.resource.data.keys().hasAll(['missionType', 'completionStatus', 'completedAt'])
+                      && (!('finalScore' in request.resource.data) || request.resource.data.finalScore >= 0);
+        allow update: if isOwner(userId) && isReasonableSize();
+        allow delete: if isOwner(userId);
+      }
+    }
+
+    // Default deny for all other paths
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}

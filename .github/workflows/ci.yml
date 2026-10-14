@@ -22,9 +22,9 @@ jobs:
           cache: 'npm'
 
       - name: Install Project Dependencies
-        run: npm install
+        run: npm ci
 
-      - name: Execute Automated Test Suite (16 Test Suites)
+      - name: Execute Automated Test Suite (18 Test Suites)
         run: npm test
 
       - name: Compile Production WebGL Bundle

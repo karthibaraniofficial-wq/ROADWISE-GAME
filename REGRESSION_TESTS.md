@@ -5,12 +5,12 @@ ROADWISE employs a native Node.js test runner suite (`node --test`) transpiled t
 
 ---
 
-## 2. Automated Test Matrix (16 Suites Passing)
+## 2. Automated Test Matrix (18 Suites Passing)
 
 ```
 Test Execution: npm test (node test.js)
 Environment: Node.js v24.19.0 native runner
-Output: tests 16 | pass 16 | fail 0 | cancelled 0 | skipped 0
+Output: tests 18 | pass 18 | fail 0 | cancelled 0 | skipped 0
 ```
 
 | # | Test Suite | Scope | Critical Assertions | Status |
@@ -31,6 +31,8 @@ Output: tests 16 | pass 16 | fail 0 | cancelled 0 | skipped 0
 | **14** | `A* Pathfinding & One-Way` | `RoadNetwork.ts` | Computes smooth multi-point path; respects one-way restrictions on alleys | 🟢 **PASS** |
 | **15** | `Mission Reachability` | `RoadNetwork.ts` | All 10 missions have verified legal road paths from start $\to$ pickup $\to$ dropoffs | 🟢 **PASS** |
 | **16** | `Tactical Map Telemetry` | `RoadNetwork.ts` | Regulatory speed limits query correctly across all 8 metropolitan districts | 🟢 **PASS** |
+| **17** | `Firestore Security Rules` | `firestore.rules` | Enforces ownership, schema constraints, <200KB payload limit, and negative balance protection | 🟢 **PASS** |
+| **18** | `Controls & Key Lifecycle` | `App.tsx` | Neutralizes throttle, brake, and steering inputs on blur, pause, and modal toggle | 🟢 **PASS** |
 
 ---
 

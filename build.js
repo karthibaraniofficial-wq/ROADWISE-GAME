@@ -25,6 +25,8 @@ fs.mkdirSync('dist', { recursive: true });
 
 function getEnvDefines() {
   const defines = ['--define:process.env.NODE_ENV="production"'];
+  const envVars = {};
+
   if (fs.existsSync('.env')) {
     const envLines = fs.readFileSync('.env', 'utf-8').split('\n');
     for (const line of envLines) {
@@ -34,11 +36,23 @@ function getEnvDefines() {
       if (eqIdx > 0) {
         const key = trimmed.slice(0, eqIdx).trim();
         const val = trimmed.slice(eqIdx + 1).trim();
-        defines.push(`--define:import.meta.env.${key}=${JSON.stringify(val)}`);
-        defines.push(`--define:process.env.${key}=${JSON.stringify(val)}`);
+        envVars[key] = val;
       }
     }
   }
+
+  // Merge process.env (gives precedence to real environment variables in CI/Vercel)
+  for (const [key, val] of Object.entries(process.env)) {
+    if (key.startsWith('VITE_') && val) {
+      envVars[key] = val;
+    }
+  }
+
+  for (const [key, val] of Object.entries(envVars)) {
+    defines.push(`--define:import.meta.env.${key}=${JSON.stringify(val)}`);
+    defines.push(`--define:process.env.${key}=${JSON.stringify(val)}`);
+  }
+
   return defines;
 }
 
@@ -62,6 +76,12 @@ try {
   let html = fs.readFileSync('index.html', 'utf-8');
   html = html.replace('<script type="module" src="/src/main.tsx"></script>', '<script type="module" src="/bundle.js"></script>');
   fs.writeFileSync('dist/index.html', html);
+
+  // Copy public assets (favicon.svg, icons.svg, etc.) into dist/
+  if (fs.existsSync('public')) {
+    fs.cpSync('public', 'dist', { recursive: true });
+    console.log('Copied static assets from public/ into dist/');
+  }
 
   console.log('Build completed successfully in dist/');
 } catch (err) {

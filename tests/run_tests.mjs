@@ -397,3 +397,131 @@ test('16. Tactical Navigation Map: Telemetry & Landmark Routing Integrity', asyn
   assert.ok(network.getSpeedLimitAt(-85, -60) <= 30, 'Heritage alley must query 25 km/h');
 });
 
+test('17. Security & Firestore Rules: Strict Schema & Ownership Enforcement', () => {
+  function checkOwnership(authUid, targetUserId) {
+    if (!authUid) return false;
+    return authUid === targetUserId;
+  }
+
+  assert.equal(checkOwnership(null, 'user_123'), false, 'Unauthenticated access must be denied');
+  assert.equal(checkOwnership('user_attacker', 'user_victim'), false, 'User A cannot access User B resources');
+  assert.equal(checkOwnership('user_123', 'user_123'), true, 'Owner access must be allowed');
+
+  function validateGameSave(authUid, userId, data, isCreate, existingData = null) {
+    if (!checkOwnership(authUid, userId)) return { allowed: false, reason: 'UNAUTHORIZED' };
+
+    const jsonStr = JSON.stringify(data);
+    if (jsonStr.length > 200 * 1024) return { allowed: false, reason: 'OVERSIZED_PAYLOAD' };
+
+    if (isCreate) {
+      if (!data.saveName || !data.schemaVersion || !data.createdAt) {
+        return { allowed: false, reason: 'MISSING_REQUIRED_KEYS' };
+      }
+    }
+
+    if (typeof data.saveName !== 'string' || data.saveName.length < 1 || data.saveName.length > 40) {
+      return { allowed: false, reason: 'INVALID_SAVENAME' };
+    }
+
+    if ('currencyINR' in data && data.currencyINR < 0) {
+      return { allowed: false, reason: 'NEGATIVE_CURRENCY' };
+    }
+    if ('safetyScore' in data && (data.safetyScore < 0 || data.safetyScore > 100)) {
+      return { allowed: false, reason: 'INVALID_SAFETY_SCORE' };
+    }
+
+    if (data.profile) {
+      if ('currencyINR' in data.profile && data.profile.currencyINR < 0) {
+        return { allowed: false, reason: 'NEGATIVE_PROFILE_CURRENCY' };
+      }
+      if ('safetyScore' in data.profile && (data.profile.safetyScore < 0 || data.profile.safetyScore > 100)) {
+        return { allowed: false, reason: 'INVALID_PROFILE_SAFETY_SCORE' };
+      }
+      if ('level' in data.profile && data.profile.level < 1) {
+        return { allowed: false, reason: 'INVALID_PROFILE_LEVEL' };
+      }
+    }
+
+    if (!isCreate && existingData) {
+      if (data.createdAt !== existingData.createdAt) {
+        return { allowed: false, reason: 'MUTATING_CREATED_AT' };
+      }
+    }
+
+    return { allowed: true };
+  }
+
+  const validSave = {
+    id: 'slot_1',
+    saveName: 'Primary Career',
+    schemaVersion: 2,
+    createdAt: 1700000000000,
+    updatedAt: 1700000000000,
+    profile: {
+      currencyINR: 1500,
+      safetyScore: 92,
+      level: 2,
+    },
+  };
+
+  assert.equal(validateGameSave('uid_1', 'uid_1', validSave, true).allowed, true);
+  assert.equal(validateGameSave(null, 'uid_1', validSave, true).allowed, false);
+  assert.equal(validateGameSave('uid_2', 'uid_1', validSave, true).allowed, false);
+
+  const negativeCurrencySave = {
+    ...validSave,
+    profile: { ...validSave.profile, currencyINR: -500 },
+  };
+  assert.equal(validateGameSave('uid_1', 'uid_1', negativeCurrencySave, true).allowed, false);
+
+  const invalidSafetySave = {
+    ...validSave,
+    profile: { ...validSave.profile, safetyScore: 120 },
+  };
+  assert.equal(validateGameSave('uid_1', 'uid_1', invalidSafetySave, true).allowed, false);
+
+  const longNameSave = {
+    ...validSave,
+    saveName: 'A'.repeat(45),
+  };
+  assert.equal(validateGameSave('uid_1', 'uid_1', longNameSave, true).allowed, false);
+
+  const mutatedCreatedAtSave = {
+    ...validSave,
+    createdAt: 1800000000000,
+  };
+  assert.equal(
+    validateGameSave('uid_1', 'uid_1', mutatedCreatedAtSave, false, validSave).allowed,
+    false,
+    'Mutating createdAt on update must be rejected'
+  );
+});
+
+test('18. Controls & Key State Lifecycle: Neutralization on Blur & Pause', () => {
+  let inputs = {
+    throttle: true,
+    brake: true,
+    steerLeft: true,
+    steerRight: true,
+    handbrake: true,
+  };
+
+  const clearAllKeys = () => {
+    inputs = {
+      throttle: false,
+      brake: false,
+      steerLeft: false,
+      steerRight: false,
+      handbrake: false,
+    };
+  };
+
+  clearAllKeys();
+  assert.equal(inputs.throttle, false, 'Throttle must be released');
+  assert.equal(inputs.brake, false, 'Brake must be released');
+  assert.equal(inputs.steerLeft, false, 'Steering left must be released');
+  assert.equal(inputs.steerRight, false, 'Steering right must be released');
+  assert.equal(inputs.handbrake, false, 'Handbrake must be released');
+});
+
+

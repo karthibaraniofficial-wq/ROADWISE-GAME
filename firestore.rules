@@ -29,11 +29,15 @@ service cloud.firestore {
                     && request.resource.data.keys().hasAll(['displayName', 'email', 'createdAt'])
                     && request.resource.data.email is string
                     && request.resource.data.displayName is string
+                    && request.resource.data.displayName.size() <= 60
                     && (!('totalCurrency' in request.resource.data) || request.resource.data.totalCurrency >= 0)
+                    && (!('safetyRating' in request.resource.data) || (request.resource.data.safetyRating >= 0 && request.resource.data.safetyRating <= 100))
                     && (!('playerLevel' in request.resource.data) || request.resource.data.playerLevel >= 1);
 
       allow update: if isOwner(userId)
                     && isReasonableSize()
+                    && request.resource.data.createdAt == resource.data.createdAt
+                    && (!('displayName' in request.resource.data) || (request.resource.data.displayName is string && request.resource.data.displayName.size() <= 60))
                     && (!('totalCurrency' in request.resource.data) || request.resource.data.totalCurrency >= 0)
                     && (!('safetyRating' in request.resource.data) || (request.resource.data.safetyRating >= 0 && request.resource.data.safetyRating <= 100))
                     && (!('playerLevel' in request.resource.data) || request.resource.data.playerLevel >= 1);
@@ -47,20 +51,33 @@ service cloud.firestore {
                       && isReasonableSize()
                       && request.resource.data.keys().hasAll(['saveName', 'schemaVersion', 'createdAt'])
                       && request.resource.data.saveName is string
+                      && request.resource.data.saveName.size() >= 1
                       && request.resource.data.saveName.size() <= 40
                       && (!('currency' in request.resource.data) || request.resource.data.currency >= 0)
                       && (!('currencyINR' in request.resource.data) || request.resource.data.currencyINR >= 0)
                       && (!('safetyRating' in request.resource.data) || (request.resource.data.safetyRating >= 0 && request.resource.data.safetyRating <= 100))
-                      && (!('safetyScore' in request.resource.data) || (request.resource.data.safetyScore >= 0 && request.resource.data.safetyScore <= 100));
+                      && (!('safetyScore' in request.resource.data) || (request.resource.data.safetyScore >= 0 && request.resource.data.safetyScore <= 100))
+                      && (!('profile' in request.resource.data) || (
+                           (!('currencyINR' in request.resource.data.profile) || request.resource.data.profile.currencyINR >= 0)
+                           && (!('safetyScore' in request.resource.data.profile) || (request.resource.data.profile.safetyScore >= 0 && request.resource.data.profile.safetyScore <= 100))
+                           && (!('level' in request.resource.data.profile) || request.resource.data.profile.level >= 1)
+                         ));
 
         allow update: if isOwner(userId)
                       && isReasonableSize()
+                      && request.resource.data.createdAt == resource.data.createdAt
                       && request.resource.data.saveName is string
+                      && request.resource.data.saveName.size() >= 1
                       && request.resource.data.saveName.size() <= 40
                       && (!('currency' in request.resource.data) || request.resource.data.currency >= 0)
                       && (!('currencyINR' in request.resource.data) || request.resource.data.currencyINR >= 0)
                       && (!('safetyRating' in request.resource.data) || (request.resource.data.safetyRating >= 0 && request.resource.data.safetyRating <= 100))
-                      && (!('safetyScore' in request.resource.data) || (request.resource.data.safetyScore >= 0 && request.resource.data.safetyScore <= 100));
+                      && (!('safetyScore' in request.resource.data) || (request.resource.data.safetyScore >= 0 && request.resource.data.safetyScore <= 100))
+                      && (!('profile' in request.resource.data) || (
+                           (!('currencyINR' in request.resource.data.profile) || request.resource.data.profile.currencyINR >= 0)
+                           && (!('safetyScore' in request.resource.data.profile) || (request.resource.data.profile.safetyScore >= 0 && request.resource.data.profile.safetyScore <= 100))
+                           && (!('level' in request.resource.data.profile) || request.resource.data.profile.level >= 1)
+                         ));
 
         allow delete: if isOwner(userId);
       }
@@ -72,7 +89,9 @@ service cloud.firestore {
                       && isReasonableSize()
                       && request.resource.data.keys().hasAll(['missionType', 'completionStatus', 'completedAt'])
                       && (!('finalScore' in request.resource.data) || request.resource.data.finalScore >= 0);
-        allow update: if isOwner(userId) && isReasonableSize();
+        allow update: if isOwner(userId)
+                      && isReasonableSize()
+                      && request.resource.data.completedAt == resource.data.completedAt;
         allow delete: if isOwner(userId);
       }
     }

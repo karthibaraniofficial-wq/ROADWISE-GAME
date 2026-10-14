@@ -6,8 +6,8 @@
 
 <br/>
 
-[![Deployment Status](https://img.shields.io/badge/Deployment-Vercel%20Edge%20Cloud-000000?style=for-the-badge&logo=vercel&logoColor=white)](https://github.com/karthibaraniofficial-wq/ROADWISE-GAME)
-[![Test Suites](https://img.shields.io/badge/Test%20Suite-16%2F16%20Passing-10b981?style=for-the-badge&logo=node.js&logoColor=white)](file:///e:/game%20road%20game/REGRESSION_TESTS.md)
+[![Deployment Status](https://img.shields.io/badge/Deployment-Vercel%20Edge%20Cloud-000000?style=for-the-badge&logo=vercel&logoColor=white)](https://roadwise-game.vercel.app)
+[![Test Suites](https://img.shields.io/badge/Test%20Suite-18%2F18%20Passing-10b981?style=for-the-badge&logo=node.js&logoColor=white)](REGRESSION_TESTS.md)
 [![Three.js](https://img.shields.io/badge/Three.js-WebGL%2060%20FPS-000000?style=for-the-badge&logo=threedotjs&logoColor=white)](https://threejs.org/)
 [![React 19](https://img.shields.io/badge/React-19.0.0-61dafb?style=for-the-badge&logo=react&logoColor=black)](https://react.dev/)
 [![TypeScript](https://img.shields.io/badge/TypeScript-5.9-3178c6?style=for-the-badge&logo=typescript&logoColor=white)](https://www.typescriptlang.org/)
@@ -198,7 +198,7 @@ npm run dev
 
 ## 🧪 Automated Testing & Build Pipeline
 
-ROADWISE includes an automated test runner executing **16 comprehensive test suites**:
+ROADWISE includes an automated test runner executing **18 comprehensive test suites**:
 
 ```bash
 # Run the complete test suite
@@ -221,7 +221,9 @@ npm test
 # ✔ 14. Navigation Graph: A* Pathfinding Between Districts & One-Way Respect
 # ✔ 15. Mission Reachability: All 10 Delivery Missions Reachable Via Road Graph
 # ✔ 16. Tactical Navigation Map: Telemetry & Landmark Routing Integrity
-# ℹ tests 16 | pass 16 | fail 0 | duration_ms ~500ms
+# ✔ 17. Security & Firestore Rules: Strict Schema & Ownership Enforcement
+# ✔ 18. Controls & Key State Lifecycle: Neutralization on Blur & Pause
+# ℹ tests 18 | pass 18 | fail 0 | duration_ms ~490ms
 ```
 
 ### Production Build
@@ -289,8 +291,8 @@ roadwise/
 ---
 
 ## 🔒 Contributing & Security
-- Please review [CONTRIBUTING.md](file:///e:/game%20road%20game/CONTRIBUTING.md) for pull request guidelines and development standards.
-- For vulnerability disclosures, review [SECURITY.md](file:///e:/game%20road%20game/SECURITY.md).
+- Please review [CONTRIBUTING.md](CONTRIBUTING.md) for pull request guidelines and development standards.
+- For vulnerability disclosures, review [SECURITY.md](SECURITY.md).
 
 ---
 

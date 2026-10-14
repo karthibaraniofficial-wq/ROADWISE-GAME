@@ -188,6 +188,17 @@ export const App: React.FC = () => {
     };
   }, [screen, activeMission, profile.selectedVehicleId, updateProfile, user]);
 
+  const clearAllKeys = useCallback(() => {
+    inputsRef.current = {
+      throttle: false,
+      brake: false,
+      steerLeft: false,
+      steerRight: false,
+      handbrake: false,
+    };
+    gameEngineRef.current?.setInputs(inputsRef.current);
+  }, []);
+
   // Robust Keyboard Controls Overhaul (Phase 6)
   useEffect(() => {
     const isInputFocused = (e: KeyboardEvent) => {
@@ -195,17 +206,6 @@ export const App: React.FC = () => {
       if (!target) return false;
       const tag = target.tagName ? target.tagName.toLowerCase() : '';
       return tag === 'input' || tag === 'textarea' || tag === 'select' || target.isContentEditable;
-    };
-
-    const clearAllKeys = () => {
-      inputsRef.current = {
-        throttle: false,
-        brake: false,
-        steerLeft: false,
-        steerRight: false,
-        handbrake: false,
-      };
-      gameEngineRef.current?.setInputs(inputsRef.current);
     };
 
     const handleKeyDown = (e: KeyboardEvent) => {
@@ -243,6 +243,7 @@ export const App: React.FC = () => {
         }
 
         if (code === 'KeyM') {
+          clearAllKeys();
           setIsMapOpen((prev) => !prev);
         }
 
@@ -251,6 +252,7 @@ export const App: React.FC = () => {
 
       if (code === 'Escape') {
         if (screen === 'PLAYING') {
+          clearAllKeys();
           setIsPaused((prev) => {
             const next = !prev;
             if (next) gameEngineRef.current?.pause();
@@ -417,8 +419,12 @@ export const App: React.FC = () => {
             }}
             onPlayHorn={() => soundEngine.playHorn()}
             onInteract={() => gameEngineRef.current?.interact()}
-            onToggleMap={() => setIsMapOpen((prev) => !prev)}
+            onToggleMap={() => {
+              clearAllKeys();
+              setIsMapOpen((prev) => !prev);
+            }}
             onPause={() => {
+              clearAllKeys();
               setIsPaused(true);
               gameEngineRef.current?.pause();
             }}
@@ -439,7 +445,10 @@ export const App: React.FC = () => {
             }
             isPickupComplete={activeMissionState?.isPickupComplete || false}
             isMapOpen={isMapOpen}
-            onToggleMap={() => setIsMapOpen((prev) => !prev)}
+            onToggleMap={() => {
+              clearAllKeys();
+              setIsMapOpen((prev) => !prev);
+            }}
           />
 
           <TouchControls

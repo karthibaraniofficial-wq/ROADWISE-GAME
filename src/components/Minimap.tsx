@@ -46,7 +46,9 @@ export const Minimap: React.FC<MinimapProps> = ({
       const tag = (e.target as HTMLElement)?.tagName?.toLowerCase();
       if (tag === 'input' || tag === 'textarea') return;
       if (e.code === 'KeyM') {
-        toggleExpanded();
+        if (!controlledToggle) {
+          toggleExpanded();
+        }
       } else if (e.code === 'Escape' && isExpanded) {
         toggleExpanded();
       }

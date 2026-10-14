@@ -568,6 +568,23 @@ export class GameEngine {
     soundEngine.stopSiren();
     soundEngine.setRain(false);
 
+    // Thorough Three.js GPU memory cleanup
+    this.scene.traverse((obj) => {
+      if ((obj as THREE.Mesh).isMesh) {
+        const mesh = obj as THREE.Mesh;
+        if (mesh.geometry) {
+          mesh.geometry.dispose();
+        }
+        if (mesh.material) {
+          if (Array.isArray(mesh.material)) {
+            mesh.material.forEach((m) => m.dispose());
+          } else {
+            mesh.material.dispose();
+          }
+        }
+      }
+    });
+
     if (this.renderer) {
       this.renderer.dispose();
       if (this.renderer.domElement && this.renderer.domElement.parentNode) {

@@ -3,11 +3,29 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { execFileSync } from 'node:child_process';
 
-const esbuildPath = path.resolve('node_modules/@esbuild/win32-x64/esbuild.exe');
+function getEsbuildPath() {
+  const platform = process.platform;
+  const arch = process.arch;
+  const candidates = [
+    path.resolve(`node_modules/@esbuild/${platform}-${arch}/esbuild${platform === 'win32' ? '.exe' : ''}`),
+    path.resolve(`node_modules/@esbuild/${platform}-${arch}/bin/esbuild`),
+    path.resolve('node_modules/@esbuild/win32-x64/esbuild.exe'),
+    path.resolve(`node_modules/.bin/esbuild${platform === 'win32' ? '.cmd' : ''}`),
+    path.resolve('node_modules/.bin/esbuild'),
+  ];
+  for (const c of candidates) {
+    if (fs.existsSync(c)) return c;
+  }
+  return 'esbuild';
+}
+
+const esbuildPath = getEsbuildPath();
 const PORT = 5173;
 
 function getEnvDefines() {
   const defines = ['--define:process.env.NODE_ENV="development"'];
+  const envVars = {};
+
   if (fs.existsSync('.env')) {
     const envLines = fs.readFileSync('.env', 'utf-8').split('\n');
     for (const line of envLines) {
@@ -17,11 +35,22 @@ function getEnvDefines() {
       if (eqIdx > 0) {
         const key = trimmed.slice(0, eqIdx).trim();
         const val = trimmed.slice(eqIdx + 1).trim();
-        defines.push(`--define:import.meta.env.${key}=${JSON.stringify(val)}`);
-        defines.push(`--define:process.env.${key}=${JSON.stringify(val)}`);
+        envVars[key] = val;
       }
     }
   }
+
+  for (const [key, val] of Object.entries(process.env)) {
+    if (key.startsWith('VITE_') && val) {
+      envVars[key] = val;
+    }
+  }
+
+  for (const [key, val] of Object.entries(envVars)) {
+    defines.push(`--define:import.meta.env.${key}=${JSON.stringify(val)}`);
+    defines.push(`--define:process.env.${key}=${JSON.stringify(val)}`);
+  }
+
   return defines;
 }
 
@@ -82,6 +111,11 @@ const server = http.createServer((req, res) => {
   let filePath = path.join(process.cwd(), reqUrl);
   if (reqUrl.startsWith('/bundle.')) {
     filePath = path.join(process.cwd(), 'dist', reqUrl);
+  } else if (!fs.existsSync(filePath)) {
+    const publicPath = path.join(process.cwd(), 'public', reqUrl);
+    if (fs.existsSync(publicPath)) {
+      filePath = publicPath;
+    }
   }
 
   if (fs.existsSync(filePath) && fs.statSync(filePath).isFile()) {

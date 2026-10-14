@@ -171,6 +171,7 @@ export type CloudSyncStatus = 'IDLE' | 'SYNCED' | 'SYNCING' | 'OFFLINE_LOCAL' | 
 export interface AuthUser {
   uid: string;
   email: string | null;
+  phoneNumber?: string | null;
   displayName: string | null;
   emailVerified: boolean;
   avatarUrl?: string;

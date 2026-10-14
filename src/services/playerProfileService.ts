@@ -8,6 +8,8 @@ const LOCAL_PROFILE_KEY = 'ROADWISE_USER_PROFILE_V2';
 export interface FirestoreUserProfile {
   displayName: string;
   email: string;
+  phoneNumber?: string;
+  authProvider?: string;
   createdAt: number;
   updatedAt: number;
   avatar: string;
@@ -23,8 +25,10 @@ export interface FirestoreUserProfile {
 
 export function getDefaultUserProfile(user: AuthUser, profile: PlayerProfile): FirestoreUserProfile {
   return {
-    displayName: user.displayName || profile.name || 'Courier Partner',
+    displayName: user.displayName || profile.name || (user.phoneNumber ? `Rider (${user.phoneNumber.slice(-4)})` : 'Courier Partner'),
     email: user.email || '',
+    phoneNumber: user.phoneNumber || '',
+    authProvider: user.phoneNumber ? 'phone' : user.email ? 'password' : 'unknown',
     createdAt: Date.now(),
     updatedAt: Date.now(),
     avatar: '🛵',

@@ -256,6 +256,9 @@ test('9. Authentication: Error Code Formatting & Validation', async () => {
   assert.ok(formatAuthError('auth/user-not-found').includes('No account'), 'Must format user not found error');
   assert.ok(formatAuthError('auth/email-already-in-use').includes('already exists'), 'Must format duplicate email error');
   assert.ok(formatAuthError('auth/weak-password').includes('6 characters'), 'Must format weak password error');
+  assert.ok(formatAuthError('auth/invalid-phone-number').includes('phone number'), 'Must format invalid phone error');
+  assert.ok(formatAuthError('auth/invalid-verification-code').includes('OTP'), 'Must format invalid OTP error');
+  assert.ok(formatAuthError('auth/popup-closed-by-user').includes('Google'), 'Must format popup closed error');
 });
 
 test('10. Multi-Slot Save Management & Negative Balance Protection', async () => {

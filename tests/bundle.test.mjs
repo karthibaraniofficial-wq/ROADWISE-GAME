@@ -200,11 +200,15 @@ __export(authService_exports, {
   formatAuthError: () => formatAuthError,
   getCurrentAuthUser: () => getCurrentAuthUser,
   loginPlayer: () => loginPlayer,
+  loginWithGoogle: () => loginWithGoogle,
   logoutPlayer: () => logoutPlayer,
   registerPlayer: () => registerPlayer,
   resendVerificationEmail: () => resendVerificationEmail,
+  sendPhoneOtp: () => sendPhoneOtp,
   sendPlayerPasswordReset: () => sendPlayerPasswordReset,
-  subscribeToAuthState: () => subscribeToAuthState
+  setupPhoneRecaptcha: () => setupPhoneRecaptcha,
+  subscribeToAuthState: () => subscribeToAuthState,
+  verifyPhoneOtp: () => verifyPhoneOtp
 });
 import {
   createUserWithEmailAndPassword,
@@ -215,7 +219,11 @@ import {
   onAuthStateChanged,
   updateProfile,
   setPersistence,
-  browserLocalPersistence
+  browserLocalPersistence,
+  GoogleAuthProvider,
+  signInWithPopup,
+  RecaptchaVerifier,
+  signInWithPhoneNumber
 } from "firebase/auth";
 function formatAuthError(errorCode) {
   switch (errorCode) {
@@ -238,6 +246,18 @@ function formatAuthError(errorCode) {
       return "Network connection failure. Please check your internet connection.";
     case "auth/requires-recent-login":
       return "This operation is sensitive and requires a fresh login session.";
+    case "auth/popup-closed-by-user":
+      return "Google sign-in popup was closed before completing.";
+    case "auth/popup-blocked":
+      return "Google sign-in popup was blocked by browser. Please enable popups.";
+    case "auth/invalid-phone-number":
+      return "Invalid phone number. Please include your country code (e.g. +91 9876543210).";
+    case "auth/invalid-verification-code":
+      return "Incorrect 6-digit SMS OTP code. Please check and retry.";
+    case "auth/code-expired":
+      return "The SMS OTP code has expired. Please request a new code.";
+    case "auth/captcha-check-failed":
+      return "reCAPTCHA security check failed. Please refresh and retry.";
     default:
       return "An authentication error occurred. Please try again.";
   }
@@ -247,7 +267,8 @@ function mapFirebaseUser(user) {
   return {
     uid: user.uid,
     email: user.email,
-    displayName: user.displayName || user.email?.split("@")[0] || "Courier Rider",
+    phoneNumber: user.phoneNumber,
+    displayName: user.displayName || user.phoneNumber || user.email?.split("@")[0] || "Courier Rider",
     emailVerified: user.emailVerified,
     avatarUrl: user.photoURL || void 0
   };
@@ -345,6 +366,87 @@ function subscribeToAuthState(callback) {
   return () => {
   };
 }
+async function loginWithGoogle() {
+  if (!isFirebaseConfigured() || !auth) {
+    const guestUser = {
+      uid: "google_offline_" + Date.now(),
+      email: "rider.google@example.com",
+      displayName: "Google Rider",
+      emailVerified: true
+    };
+    localStorage.setItem(LOCAL_STORAGE_GUEST_KEY, JSON.stringify(guestUser));
+    return guestUser;
+  }
+  const provider = new GoogleAuthProvider();
+  provider.setCustomParameters({ prompt: "select_account" });
+  const credential = await signInWithPopup(auth, provider);
+  const mapped = mapFirebaseUser(credential.user);
+  if (!mapped) throw new Error("Google sign-in failed to establish user session.");
+  return mapped;
+}
+function setupPhoneRecaptcha(containerId = "recaptcha-container") {
+  if (!isFirebaseConfigured() || !auth) return null;
+  if (typeof window === "undefined") return null;
+  const container = document.getElementById(containerId);
+  if (!container) {
+    console.warn("[ROADWISE AUTH] reCAPTCHA container element not found:", containerId);
+    return null;
+  }
+  if (activeRecaptchaVerifier) {
+    try {
+      activeRecaptchaVerifier.clear();
+    } catch {
+    }
+    activeRecaptchaVerifier = null;
+  }
+  activeRecaptchaVerifier = new RecaptchaVerifier(auth, containerId, {
+    size: "invisible",
+    callback: () => {
+      console.info("[ROADWISE AUTH] reCAPTCHA verified for phone authentication.");
+    },
+    "expired-callback": () => {
+      console.warn("[ROADWISE AUTH] reCAPTCHA expired. Prompting new attempt.");
+    }
+  });
+  return activeRecaptchaVerifier;
+}
+async function sendPhoneOtp(phoneNumber, containerId = "recaptcha-container") {
+  const cleanPhone = phoneNumber.trim().replace(/\s+/g, "");
+  if (!cleanPhone || cleanPhone.length < 8) {
+    throw new Error("Please enter a valid phone number with country code (e.g. +91 98765 43210).");
+  }
+  if (!isFirebaseConfigured() || !auth) {
+    console.info("[ROADWISE AUTH] Phone OTP simulated in Offline/Local mode for:", cleanPhone);
+    return;
+  }
+  const verifier = setupPhoneRecaptcha(containerId);
+  if (!verifier) {
+    throw new Error("Security verification element is not ready. Please refresh the page and try again.");
+  }
+  const confirmation = await signInWithPhoneNumber(auth, cleanPhone, verifier);
+  activeConfirmationResult = confirmation;
+}
+async function verifyPhoneOtp(otpCode, fallbackPhone) {
+  const cleanOtp = otpCode.trim();
+  if (!cleanOtp || cleanOtp.length < 6) {
+    throw new Error("Please enter the 6-digit SMS verification code.");
+  }
+  if (!isFirebaseConfigured() || !auth || !activeConfirmationResult) {
+    const guestUser = {
+      uid: "phone_offline_" + Date.now(),
+      email: null,
+      phoneNumber: fallbackPhone || "+919876543210",
+      displayName: "Mobile Courier (" + (fallbackPhone?.slice(-4) || "9876") + ")",
+      emailVerified: true
+    };
+    localStorage.setItem(LOCAL_STORAGE_GUEST_KEY, JSON.stringify(guestUser));
+    return guestUser;
+  }
+  const credential = await activeConfirmationResult.confirm(cleanOtp);
+  const mapped = mapFirebaseUser(credential.user);
+  if (!mapped) throw new Error("Phone verification failed to establish user session.");
+  return mapped;
+}
 function getCurrentAuthUser() {
   if (isFirebaseConfigured() && auth && auth.currentUser) {
     return mapFirebaseUser(auth.currentUser);
@@ -359,7 +461,7 @@ function getCurrentAuthUser() {
   }
   return null;
 }
-var LOCAL_STORAGE_GUEST_KEY;
+var LOCAL_STORAGE_GUEST_KEY, activeRecaptchaVerifier, activeConfirmationResult;
 var init_authService = __esm({
   "src/services/authService.ts"() {
     init_firebase();
@@ -369,6 +471,8 @@ var init_authService = __esm({
       });
     }
     LOCAL_STORAGE_GUEST_KEY = "ROADWISE_GUEST_USER_V1";
+    activeRecaptchaVerifier = null;
+    activeConfirmationResult = null;
   }
 });
 
@@ -20227,6 +20331,9 @@ test("9. Authentication: Error Code Formatting & Validation", async () => {
   assert.ok(formatAuthError2("auth/user-not-found").includes("No account"), "Must format user not found error");
   assert.ok(formatAuthError2("auth/email-already-in-use").includes("already exists"), "Must format duplicate email error");
   assert.ok(formatAuthError2("auth/weak-password").includes("6 characters"), "Must format weak password error");
+  assert.ok(formatAuthError2("auth/invalid-phone-number").includes("phone number"), "Must format invalid phone error");
+  assert.ok(formatAuthError2("auth/invalid-verification-code").includes("OTP"), "Must format invalid OTP error");
+  assert.ok(formatAuthError2("auth/popup-closed-by-user").includes("Google"), "Must format popup closed error");
 });
 test("10. Multi-Slot Save Management & Negative Balance Protection", async () => {
   const { createDefaultSaveSlot: createDefaultSaveSlot2 } = await Promise.resolve().then(() => (init_saveGameService(), saveGameService_exports));

@@ -9,6 +9,9 @@ import {
   sendPlayerPasswordReset,
   resendVerificationEmail,
   formatAuthError,
+  loginWithGoogle,
+  sendPhoneOtp,
+  verifyPhoneOtp,
 } from '../services/authService';
 import { isFirebaseConfigured } from '../lib/firebase';
 
@@ -19,6 +22,9 @@ export interface UseAuthReturn {
   isFirebaseLive: boolean;
   login: (email: string, pass: string) => Promise<void>;
   register: (email: string, pass: string, name: string) => Promise<void>;
+  loginGoogle: () => Promise<void>;
+  sendOtp: (phone: string, containerId?: string) => Promise<void>;
+  verifyOtp: (otp: string, fallbackPhone?: string) => Promise<void>;
   logout: () => Promise<void>;
   resetPassword: (email: string) => Promise<void>;
   resendVerification: () => Promise<void>;
@@ -70,6 +76,50 @@ export function useAuth(): UseAuthReturn {
     }
   }, []);
 
+  const loginGoogle = useCallback(async () => {
+    setLoading(true);
+    setError(null);
+    try {
+      const loggedIn = await loginWithGoogle();
+      setUser(loggedIn);
+    } catch (err: any) {
+      const msg = err.code ? formatAuthError(err.code) : err.message || 'Google sign-in failed';
+      setError(msg);
+      throw new Error(msg);
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  const sendOtp = useCallback(async (phone: string, containerId?: string) => {
+    setLoading(true);
+    setError(null);
+    try {
+      await sendPhoneOtp(phone, containerId);
+    } catch (err: any) {
+      const msg = err.code ? formatAuthError(err.code) : err.message || 'Failed to send OTP';
+      setError(msg);
+      throw new Error(msg);
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  const verifyOtp = useCallback(async (otp: string, fallbackPhone?: string) => {
+    setLoading(true);
+    setError(null);
+    try {
+      const loggedIn = await verifyPhoneOtp(otp, fallbackPhone);
+      setUser(loggedIn);
+    } catch (err: any) {
+      const msg = err.code ? formatAuthError(err.code) : err.message || 'OTP verification failed';
+      setError(msg);
+      throw new Error(msg);
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
   const logout = useCallback(async () => {
     setLoading(true);
     setError(null);
@@ -110,6 +160,9 @@ export function useAuth(): UseAuthReturn {
     isFirebaseLive: isFirebaseConfigured(),
     login,
     register,
+    loginGoogle,
+    sendOtp,
+    verifyOtp,
     logout,
     resetPassword,
     resendVerification,

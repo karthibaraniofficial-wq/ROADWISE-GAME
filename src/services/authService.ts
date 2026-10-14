@@ -9,6 +9,11 @@ import {
   updateProfile,
   setPersistence,
   browserLocalPersistence,
+  GoogleAuthProvider,
+  signInWithPopup,
+  RecaptchaVerifier,
+  signInWithPhoneNumber,
+  ConfirmationResult,
   User,
 } from 'firebase/auth';
 import { auth, isFirebaseConfigured } from '../lib/firebase';
@@ -44,6 +49,18 @@ export function formatAuthError(errorCode: string): string {
       return 'Network connection failure. Please check your internet connection.';
     case 'auth/requires-recent-login':
       return 'This operation is sensitive and requires a fresh login session.';
+    case 'auth/popup-closed-by-user':
+      return 'Google sign-in popup was closed before completing.';
+    case 'auth/popup-blocked':
+      return 'Google sign-in popup was blocked by browser. Please enable popups.';
+    case 'auth/invalid-phone-number':
+      return 'Invalid phone number. Please include your country code (e.g. +91 9876543210).';
+    case 'auth/invalid-verification-code':
+      return 'Incorrect 6-digit SMS OTP code. Please check and retry.';
+    case 'auth/code-expired':
+      return 'The SMS OTP code has expired. Please request a new code.';
+    case 'auth/captcha-check-failed':
+      return 'reCAPTCHA security check failed. Please refresh and retry.';
     default:
       return 'An authentication error occurred. Please try again.';
   }
@@ -54,7 +71,8 @@ function mapFirebaseUser(user: User | null): AuthUser | null {
   return {
     uid: user.uid,
     email: user.email,
-    displayName: user.displayName || user.email?.split('@')[0] || 'Courier Rider',
+    phoneNumber: user.phoneNumber,
+    displayName: user.displayName || user.phoneNumber || user.email?.split('@')[0] || 'Courier Rider',
     emailVerified: user.emailVerified,
     avatarUrl: user.photoURL || undefined,
   };
@@ -193,6 +211,118 @@ export function subscribeToAuthState(callback: (user: AuthUser | null) => void):
   }
 
   return () => {};
+}
+
+/**
+ * Sign in using Google OAuth Popup.
+ */
+export async function loginWithGoogle(): Promise<AuthUser> {
+  if (!isFirebaseConfigured() || !auth) {
+    const guestUser: AuthUser = {
+      uid: 'google_offline_' + Date.now(),
+      email: 'rider.google@example.com',
+      displayName: 'Google Rider',
+      emailVerified: true,
+    };
+    localStorage.setItem(LOCAL_STORAGE_GUEST_KEY, JSON.stringify(guestUser));
+    return guestUser;
+  }
+
+  const provider = new GoogleAuthProvider();
+  provider.setCustomParameters({ prompt: 'select_account' });
+  const credential = await signInWithPopup(auth, provider);
+  const mapped = mapFirebaseUser(credential.user);
+  if (!mapped) throw new Error('Google sign-in failed to establish user session.');
+  return mapped;
+}
+
+let activeRecaptchaVerifier: RecaptchaVerifier | null = null;
+let activeConfirmationResult: ConfirmationResult | null = null;
+
+/**
+ * Initializes invisible reCAPTCHA verifier for Phone Auth.
+ */
+export function setupPhoneRecaptcha(containerId: string = 'recaptcha-container'): RecaptchaVerifier | null {
+  if (!isFirebaseConfigured() || !auth) return null;
+  if (typeof window === 'undefined') return null;
+
+  const container = document.getElementById(containerId);
+  if (!container) {
+    console.warn('[ROADWISE AUTH] reCAPTCHA container element not found:', containerId);
+    return null;
+  }
+
+  if (activeRecaptchaVerifier) {
+    try {
+      activeRecaptchaVerifier.clear();
+    } catch {
+      // Ignored if already cleared
+    }
+    activeRecaptchaVerifier = null;
+  }
+
+  activeRecaptchaVerifier = new RecaptchaVerifier(auth, containerId, {
+    size: 'invisible',
+    callback: () => {
+      console.info('[ROADWISE AUTH] reCAPTCHA verified for phone authentication.');
+    },
+    'expired-callback': () => {
+      console.warn('[ROADWISE AUTH] reCAPTCHA expired. Prompting new attempt.');
+    },
+  });
+
+  return activeRecaptchaVerifier;
+}
+
+/**
+ * Send SMS OTP verification code to a phone number (E.164 format, e.g. +919876543210).
+ */
+export async function sendPhoneOtp(phoneNumber: string, containerId: string = 'recaptcha-container'): Promise<void> {
+  const cleanPhone = phoneNumber.trim().replace(/\s+/g, '');
+  if (!cleanPhone || cleanPhone.length < 8) {
+    throw new Error('Please enter a valid phone number with country code (e.g. +91 98765 43210).');
+  }
+
+  if (!isFirebaseConfigured() || !auth) {
+    console.info('[ROADWISE AUTH] Phone OTP simulated in Offline/Local mode for:', cleanPhone);
+    return;
+  }
+
+  const verifier = setupPhoneRecaptcha(containerId);
+  if (!verifier) {
+    throw new Error('Security verification element is not ready. Please refresh the page and try again.');
+  }
+
+  const confirmation = await signInWithPhoneNumber(auth, cleanPhone, verifier);
+  activeConfirmationResult = confirmation;
+}
+
+/**
+ * Verify SMS OTP code and establish user session.
+ */
+export async function verifyPhoneOtp(otpCode: string, fallbackPhone?: string): Promise<AuthUser> {
+  const cleanOtp = otpCode.trim();
+  if (!cleanOtp || cleanOtp.length < 6) {
+    throw new Error('Please enter the 6-digit SMS verification code.');
+  }
+
+  if (!isFirebaseConfigured() || !auth || !activeConfirmationResult) {
+    // Offline simulation fallback
+    const guestUser: AuthUser = {
+      uid: 'phone_offline_' + Date.now(),
+      email: null,
+      phoneNumber: fallbackPhone || '+919876543210',
+      displayName: 'Mobile Courier (' + (fallbackPhone?.slice(-4) || '9876') + ')',
+      emailVerified: true,
+    };
+    localStorage.setItem(LOCAL_STORAGE_GUEST_KEY, JSON.stringify(guestUser));
+    return guestUser;
+  }
+
+  const credential = await activeConfirmationResult.confirm(cleanOtp);
+  const mapped = mapFirebaseUser(credential.user);
+  if (!mapped) throw new Error('Phone verification failed to establish user session.');
+  return mapped;
 }
 
 /**

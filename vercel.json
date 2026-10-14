@@ -1,4 +1,5 @@
 {
+  "name": "roadwise-game",
   "buildCommand": "npm run build",
   "outputDirectory": "dist",
   "framework": null,

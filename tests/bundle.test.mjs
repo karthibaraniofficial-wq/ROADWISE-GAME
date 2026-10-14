@@ -163,12 +163,12 @@ var firebaseConfig, appInstance, authInstance, firestoreInstance, app, auth, db;
 var init_firebase = __esm({
   "src/lib/firebase.ts"() {
     firebaseConfig = {
-      apiKey: typeof import.meta !== "undefined" && import.meta.env?.VITE_FIREBASE_API_KEY || (typeof process !== "undefined" ? process.env.VITE_FIREBASE_API_KEY : "") || "",
-      authDomain: typeof import.meta !== "undefined" && import.meta.env?.VITE_FIREBASE_AUTH_DOMAIN || (typeof process !== "undefined" ? process.env.VITE_FIREBASE_AUTH_DOMAIN : "") || "",
-      projectId: typeof import.meta !== "undefined" && import.meta.env?.VITE_FIREBASE_PROJECT_ID || (typeof process !== "undefined" ? process.env.VITE_FIREBASE_PROJECT_ID : "") || "",
-      storageBucket: typeof import.meta !== "undefined" && import.meta.env?.VITE_FIREBASE_STORAGE_BUCKET || (typeof process !== "undefined" ? process.env.VITE_FIREBASE_STORAGE_BUCKET : "") || "",
-      messagingSenderId: typeof import.meta !== "undefined" && import.meta.env?.VITE_FIREBASE_MESSAGING_SENDER_ID || (typeof process !== "undefined" ? process.env.VITE_FIREBASE_MESSAGING_SENDER_ID : "") || "",
-      appId: typeof import.meta !== "undefined" && import.meta.env?.VITE_FIREBASE_APP_ID || (typeof process !== "undefined" ? process.env.VITE_FIREBASE_APP_ID : "") || ""
+      apiKey: typeof import.meta !== "undefined" && import.meta.env?.VITE_FIREBASE_API_KEY || (typeof process !== "undefined" ? process.env.VITE_FIREBASE_API_KEY : "") || "AIzaSyC4dhQ78ooK6PkyV9kdCtRA9K9cXMEWS-Y",
+      authDomain: typeof import.meta !== "undefined" && import.meta.env?.VITE_FIREBASE_AUTH_DOMAIN || (typeof process !== "undefined" ? process.env.VITE_FIREBASE_AUTH_DOMAIN : "") || "roadwise-e5b11.firebaseapp.com",
+      projectId: typeof import.meta !== "undefined" && import.meta.env?.VITE_FIREBASE_PROJECT_ID || (typeof process !== "undefined" ? process.env.VITE_FIREBASE_PROJECT_ID : "") || "roadwise-e5b11",
+      storageBucket: typeof import.meta !== "undefined" && import.meta.env?.VITE_FIREBASE_STORAGE_BUCKET || (typeof process !== "undefined" ? process.env.VITE_FIREBASE_STORAGE_BUCKET : "") || "roadwise-e5b11.firebasestorage.app",
+      messagingSenderId: typeof import.meta !== "undefined" && import.meta.env?.VITE_FIREBASE_MESSAGING_SENDER_ID || (typeof process !== "undefined" ? process.env.VITE_FIREBASE_MESSAGING_SENDER_ID : "") || "862417180172",
+      appId: typeof import.meta !== "undefined" && import.meta.env?.VITE_FIREBASE_APP_ID || (typeof process !== "undefined" ? process.env.VITE_FIREBASE_APP_ID : "") || "1:862417180172:web:bbded7ab3cc18d8276c029"
     };
     appInstance = null;
     authInstance = null;

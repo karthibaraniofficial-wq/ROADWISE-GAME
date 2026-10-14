@@ -6,6 +6,25 @@ import { execFileSync } from 'node:child_process';
 const esbuildPath = path.resolve('node_modules/@esbuild/win32-x64/esbuild.exe');
 const PORT = 5173;
 
+function getEnvDefines() {
+  const defines = ['--define:process.env.NODE_ENV="development"'];
+  if (fs.existsSync('.env')) {
+    const envLines = fs.readFileSync('.env', 'utf-8').split('\n');
+    for (const line of envLines) {
+      const trimmed = line.trim();
+      if (!trimmed || trimmed.startsWith('#')) continue;
+      const eqIdx = trimmed.indexOf('=');
+      if (eqIdx > 0) {
+        const key = trimmed.slice(0, eqIdx).trim();
+        const val = trimmed.slice(eqIdx + 1).trim();
+        defines.push(`--define:import.meta.env.${key}=${JSON.stringify(val)}`);
+        defines.push(`--define:process.env.${key}=${JSON.stringify(val)}`);
+      }
+    }
+  }
+  return defines;
+}
+
 function build() {
   fs.mkdirSync('dist', { recursive: true });
   try {
@@ -21,7 +40,7 @@ function build() {
       '--loader:.svg=dataurl',
       '--loader:.css=css',
       '--sourcemap',
-      '--define:process.env.NODE_ENV="development"',
+      ...getEnvDefines(),
     ]);
   } catch (err) {
     console.error('Build failure:', err.message);

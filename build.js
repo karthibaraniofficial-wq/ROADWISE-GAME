@@ -7,6 +7,25 @@ const esbuildPath = path.resolve('node_modules/@esbuild/win32-x64/esbuild.exe');
 console.log('Building ROADWISE...');
 fs.mkdirSync('dist', { recursive: true });
 
+function getEnvDefines() {
+  const defines = ['--define:process.env.NODE_ENV="production"'];
+  if (fs.existsSync('.env')) {
+    const envLines = fs.readFileSync('.env', 'utf-8').split('\n');
+    for (const line of envLines) {
+      const trimmed = line.trim();
+      if (!trimmed || trimmed.startsWith('#')) continue;
+      const eqIdx = trimmed.indexOf('=');
+      if (eqIdx > 0) {
+        const key = trimmed.slice(0, eqIdx).trim();
+        const val = trimmed.slice(eqIdx + 1).trim();
+        defines.push(`--define:import.meta.env.${key}=${JSON.stringify(val)}`);
+        defines.push(`--define:process.env.${key}=${JSON.stringify(val)}`);
+      }
+    }
+  }
+  return defines;
+}
+
 try {
   execFileSync(esbuildPath, [
     'src/main.tsx',
@@ -21,7 +40,7 @@ try {
     '--loader:.css=css',
     '--minify',
     '--sourcemap',
-    '--define:process.env.NODE_ENV="production"',
+    ...getEnvDefines(),
   ], { stdio: 'inherit' });
 
   let html = fs.readFileSync('index.html', 'utf-8');

@@ -1028,9 +1028,9 @@ function cloneUniforms(src) {
 function mergeUniforms(uniforms) {
   const merged = {};
   for (let u = 0; u < uniforms.length; u++) {
-    const tmp = cloneUniforms(uniforms[u]);
-    for (const p in tmp) {
-      merged[p] = tmp[p];
+    const tmp2 = cloneUniforms(uniforms[u]);
+    for (const p in tmp2) {
+      merged[p] = tmp2[p];
     }
   }
   return merged;
@@ -7703,6 +7703,32 @@ function WebGLUniformsGroups(gl, info, capabilities, state) {
     dispose
   };
 }
+function CubicPoly() {
+  let c0 = 0, c1 = 0, c2 = 0, c3 = 0;
+  function init(x0, x1, t0, t1) {
+    c0 = x0;
+    c1 = t0;
+    c2 = -3 * x0 + 3 * x1 - 2 * t0 - t1;
+    c3 = 2 * x0 - 2 * x1 + t0 + t1;
+  }
+  return {
+    initCatmullRom: function(x0, x1, x2, x3, tension) {
+      init(x1, x2, tension * (x2 - x0), tension * (x3 - x1));
+    },
+    initNonuniformCatmullRom: function(x0, x1, x2, x3, dt0, dt1, dt2) {
+      let t1 = (x1 - x0) / dt0 - (x2 - x0) / (dt0 + dt1) + (x2 - x1) / dt1;
+      let t2 = (x2 - x1) / dt1 - (x3 - x1) / (dt1 + dt2) + (x3 - x2) / dt2;
+      t1 *= dt1;
+      t2 *= dt1;
+      init(x1, x2, t1, t2);
+    },
+    calc: function(t) {
+      const t2 = t * t;
+      const t3 = t2 * t;
+      return c0 + c1 * t + c2 * t2 + c3 * t3;
+    }
+  };
+}
 function convertArray(array, type, forceClone) {
   if (!array || // let 'undefined' and 'null' pass
   !forceClone && array.constructor === type) return array;
@@ -7714,7 +7740,7 @@ function convertArray(array, type, forceClone) {
 function isTypedArray(object) {
   return ArrayBuffer.isView(object) && !(object instanceof DataView);
 }
-var REVISION, CullFaceNone, CullFaceBack, CullFaceFront, PCFShadowMap, PCFSoftShadowMap, VSMShadowMap, FrontSide, BackSide, DoubleSide, NoBlending, NormalBlending, AdditiveBlending, SubtractiveBlending, MultiplyBlending, CustomBlending, AddEquation, SubtractEquation, ReverseSubtractEquation, MinEquation, MaxEquation, ZeroFactor, OneFactor, SrcColorFactor, OneMinusSrcColorFactor, SrcAlphaFactor, OneMinusSrcAlphaFactor, DstAlphaFactor, OneMinusDstAlphaFactor, DstColorFactor, OneMinusDstColorFactor, SrcAlphaSaturateFactor, ConstantColorFactor, OneMinusConstantColorFactor, ConstantAlphaFactor, OneMinusConstantAlphaFactor, NeverDepth, AlwaysDepth, LessDepth, LessEqualDepth, EqualDepth, GreaterEqualDepth, GreaterDepth, NotEqualDepth, MultiplyOperation, MixOperation, AddOperation, NoToneMapping, LinearToneMapping, ReinhardToneMapping, CineonToneMapping, ACESFilmicToneMapping, CustomToneMapping, AgXToneMapping, UVMapping, CubeReflectionMapping, CubeRefractionMapping, EquirectangularReflectionMapping, EquirectangularRefractionMapping, CubeUVReflectionMapping, RepeatWrapping, ClampToEdgeWrapping, MirroredRepeatWrapping, NearestFilter, NearestMipmapNearestFilter, NearestMipmapLinearFilter, LinearFilter, LinearMipmapNearestFilter, LinearMipmapLinearFilter, UnsignedByteType, ByteType, ShortType, UnsignedShortType, IntType, UnsignedIntType, FloatType, HalfFloatType, UnsignedShort4444Type, UnsignedShort5551Type, UnsignedInt248Type, AlphaFormat, RGBAFormat, LuminanceFormat, LuminanceAlphaFormat, DepthFormat, DepthStencilFormat, RedFormat, RedIntegerFormat, RGFormat, RGIntegerFormat, RGBAIntegerFormat, RGB_S3TC_DXT1_Format, RGBA_S3TC_DXT1_Format, RGBA_S3TC_DXT3_Format, RGBA_S3TC_DXT5_Format, RGB_PVRTC_4BPPV1_Format, RGB_PVRTC_2BPPV1_Format, RGBA_PVRTC_4BPPV1_Format, RGBA_PVRTC_2BPPV1_Format, RGB_ETC1_Format, RGB_ETC2_Format, RGBA_ETC2_EAC_Format, RGBA_ASTC_4x4_Format, RGBA_ASTC_5x4_Format, RGBA_ASTC_5x5_Format, RGBA_ASTC_6x5_Format, RGBA_ASTC_6x6_Format, RGBA_ASTC_8x5_Format, RGBA_ASTC_8x6_Format, RGBA_ASTC_8x8_Format, RGBA_ASTC_10x5_Format, RGBA_ASTC_10x6_Format, RGBA_ASTC_10x8_Format, RGBA_ASTC_10x10_Format, RGBA_ASTC_12x10_Format, RGBA_ASTC_12x12_Format, RGBA_BPTC_Format, RGB_BPTC_SIGNED_Format, RGB_BPTC_UNSIGNED_Format, RED_RGTC1_Format, SIGNED_RED_RGTC1_Format, RED_GREEN_RGTC2_Format, SIGNED_RED_GREEN_RGTC2_Format, InterpolateDiscrete, InterpolateLinear, InterpolateSmooth, ZeroCurvatureEnding, ZeroSlopeEnding, WrapAroundEnding, LinearEncoding, sRGBEncoding, BasicDepthPacking, RGBADepthPacking, TangentSpaceNormalMap, ObjectSpaceNormalMap, NoColorSpace, SRGBColorSpace, LinearSRGBColorSpace, DisplayP3ColorSpace, LinearDisplayP3ColorSpace, LinearTransfer, SRGBTransfer, Rec709Primaries, P3Primaries, KeepStencilOp, AlwaysStencilFunc, NeverCompare, LessCompare, EqualCompare, LessEqualCompare, GreaterCompare, NotEqualCompare, GreaterEqualCompare, AlwaysCompare, StaticDrawUsage, GLSL3, _SRGBAFormat, WebGLCoordinateSystem, WebGPUCoordinateSystem, EventDispatcher, _lut, _seed, DEG2RAD, RAD2DEG, MathUtils, Vector2, Matrix3, _m3, _cache, LINEAR_SRGB_TO_LINEAR_DISPLAY_P3, LINEAR_DISPLAY_P3_TO_LINEAR_SRGB, COLOR_SPACES, SUPPORTED_WORKING_COLOR_SPACES, ColorManagement, _canvas, ImageUtils, _sourceId, Source, _textureId, Texture, Vector4, RenderTarget, WebGLRenderTarget, DataArrayTexture, Data3DTexture, Quaternion, Vector3, _vector$c, _quaternion$4, Box3, _points, _vector$b, _box$4, _v0$2, _v1$7, _v2$4, _f0, _f1, _f2, _center, _extents, _triangleNormal, _testAxis, _box$3, _v1$6, _v2$3, Sphere, _vector$a, _segCenter, _segDir, _diff, _edge1, _edge2, _normal$1, Ray, Matrix4, _v1$5, _m1$2, _zero, _one, _x, _y, _z, _matrix$1, _quaternion$3, Euler, Layers, _object3DId, _v1$4, _q1, _m1$1, _target, _position$3, _scale$2, _quaternion$2, _xAxis, _yAxis, _zAxis, _addedEvent, _removedEvent, Object3D, _v0$1, _v1$3, _v2$2, _v3$1, _vab, _vac, _vbc, _vap, _vbp, _vcp, warnedGetUV, Triangle, _colorKeywords, _hslA, _hslB, Color, _color, _materialId, Material, MeshBasicMaterial, _vector$9, _vector2$1, BufferAttribute, Uint16BufferAttribute, Uint32BufferAttribute, Float32BufferAttribute, _id$2, _m1, _obj, _offset, _box$2, _boxMorphTargets, _vector$8, BufferGeometry, _inverseMatrix$3, _ray$3, _sphere$6, _sphereHitAt, _vA$1, _vB$1, _vC$1, _tempA, _morphA, _uvA$1, _uvB$1, _uvC$1, _normalA, _normalB, _normalC, _intersectionPoint, _intersectionPointWorld, Mesh, BoxGeometry, UniformsUtils, default_vertex, default_fragment, ShaderMaterial, Camera, PerspectiveCamera, fov, aspect, CubeCamera, CubeTexture, WebGLCubeRenderTarget, _vector1, _vector2, _normalMatrix, Plane, _sphere$5, _vector$7, Frustum, PlaneGeometry, alphahash_fragment, alphahash_pars_fragment, alphamap_fragment, alphamap_pars_fragment, alphatest_fragment, alphatest_pars_fragment, aomap_fragment, aomap_pars_fragment, batching_pars_vertex, batching_vertex, begin_vertex, beginnormal_vertex, bsdfs, iridescence_fragment, bumpmap_pars_fragment, clipping_planes_fragment, clipping_planes_pars_fragment, clipping_planes_pars_vertex, clipping_planes_vertex, color_fragment, color_pars_fragment, color_pars_vertex, color_vertex, common, cube_uv_reflection_fragment, defaultnormal_vertex, displacementmap_pars_vertex, displacementmap_vertex, emissivemap_fragment, emissivemap_pars_fragment, colorspace_fragment, colorspace_pars_fragment, envmap_fragment, envmap_common_pars_fragment, envmap_pars_fragment, envmap_pars_vertex, envmap_vertex, fog_vertex, fog_pars_vertex, fog_fragment, fog_pars_fragment, gradientmap_pars_fragment, lightmap_fragment, lightmap_pars_fragment, lights_lambert_fragment, lights_lambert_pars_fragment, lights_pars_begin, envmap_physical_pars_fragment, lights_toon_fragment, lights_toon_pars_fragment, lights_phong_fragment, lights_phong_pars_fragment, lights_physical_fragment, lights_physical_pars_fragment, lights_fragment_begin, lights_fragment_maps, lights_fragment_end, logdepthbuf_fragment, logdepthbuf_pars_fragment, logdepthbuf_pars_vertex, logdepthbuf_vertex, map_fragment, map_pars_fragment, map_particle_fragment, map_particle_pars_fragment, metalnessmap_fragment, metalnessmap_pars_fragment, morphcolor_vertex, morphnormal_vertex, morphtarget_pars_vertex, morphtarget_vertex, normal_fragment_begin, normal_fragment_maps, normal_pars_fragment, normal_pars_vertex, normal_vertex, normalmap_pars_fragment, clearcoat_normal_fragment_begin, clearcoat_normal_fragment_maps, clearcoat_pars_fragment, iridescence_pars_fragment, opaque_fragment, packing, premultiplied_alpha_fragment, project_vertex, dithering_fragment, dithering_pars_fragment, roughnessmap_fragment, roughnessmap_pars_fragment, shadowmap_pars_fragment, shadowmap_pars_vertex, shadowmap_vertex, shadowmask_pars_fragment, skinbase_vertex, skinning_pars_vertex, skinning_vertex, skinnormal_vertex, specularmap_fragment, specularmap_pars_fragment, tonemapping_fragment, tonemapping_pars_fragment, transmission_fragment, transmission_pars_fragment, uv_pars_fragment, uv_pars_vertex, uv_vertex, worldpos_vertex, vertex$h, fragment$h, vertex$g, fragment$g, vertex$f, fragment$f, vertex$e, fragment$e, vertex$d, fragment$d, vertex$c, fragment$c, vertex$b, fragment$b, vertex$a, fragment$a, vertex$9, fragment$9, vertex$8, fragment$8, vertex$7, fragment$7, vertex$6, fragment$6, vertex$5, fragment$5, vertex$4, fragment$4, vertex$3, fragment$3, vertex$2, fragment$2, vertex$1, fragment$1, ShaderChunk, UniformsLib, ShaderLib, _rgb, OrthographicCamera, LOD_MIN, EXTRA_LOD_SIGMA, MAX_SAMPLES, _flatCamera, _clearColor, _oldTarget, _oldActiveCubeFace, _oldActiveMipmapLevel, PHI, INV_PHI, _axisDirections, PMREMGenerator, DepthTexture, emptyTexture, emptyShadowTexture, emptyArrayTexture, empty3dTexture, emptyCubeTexture, arrayCacheF32, arrayCacheI32, mat4array, mat3array, mat2array, SingleUniform, PureArrayUniform, StructuredUniform, RePathPart, WebGLUniforms, COMPLETION_STATUS_KHR, programIdCount, includePattern, shaderChunkMap, unrollLoopPattern, _id$1, WebGLShaderCache, WebGLShaderStage, nextVersion, MeshDepthMaterial, MeshDistanceMaterial, vertex, fragment, ArrayCamera, Group, _moveEvent, WebXRController, WebXRManager, WebGLRenderer, WebGL1Renderer, Interpolant, CubicInterpolant, LinearInterpolant, DiscreteInterpolant, KeyframeTrack, BooleanKeyframeTrack, ColorKeyframeTrack, NumberKeyframeTrack, QuaternionLinearInterpolant, QuaternionKeyframeTrack, StringKeyframeTrack, VectorKeyframeTrack, LoadingManager, DefaultLoadingManager, Loader, _RESERVED_CHARS_RE, _reservedRe, _wordChar, _wordCharOrDot, _directoryRe, _nodeRe, _objectRe, _propertyRe, _trackRe, _supportedObjectNames, Composite, PropertyBinding, _controlInterpolantsResultBuffer;
+var REVISION, CullFaceNone, CullFaceBack, CullFaceFront, PCFShadowMap, PCFSoftShadowMap, VSMShadowMap, FrontSide, BackSide, DoubleSide, NoBlending, NormalBlending, AdditiveBlending, SubtractiveBlending, MultiplyBlending, CustomBlending, AddEquation, SubtractEquation, ReverseSubtractEquation, MinEquation, MaxEquation, ZeroFactor, OneFactor, SrcColorFactor, OneMinusSrcColorFactor, SrcAlphaFactor, OneMinusSrcAlphaFactor, DstAlphaFactor, OneMinusDstAlphaFactor, DstColorFactor, OneMinusDstColorFactor, SrcAlphaSaturateFactor, ConstantColorFactor, OneMinusConstantColorFactor, ConstantAlphaFactor, OneMinusConstantAlphaFactor, NeverDepth, AlwaysDepth, LessDepth, LessEqualDepth, EqualDepth, GreaterEqualDepth, GreaterDepth, NotEqualDepth, MultiplyOperation, MixOperation, AddOperation, NoToneMapping, LinearToneMapping, ReinhardToneMapping, CineonToneMapping, ACESFilmicToneMapping, CustomToneMapping, AgXToneMapping, UVMapping, CubeReflectionMapping, CubeRefractionMapping, EquirectangularReflectionMapping, EquirectangularRefractionMapping, CubeUVReflectionMapping, RepeatWrapping, ClampToEdgeWrapping, MirroredRepeatWrapping, NearestFilter, NearestMipmapNearestFilter, NearestMipmapLinearFilter, LinearFilter, LinearMipmapNearestFilter, LinearMipmapLinearFilter, UnsignedByteType, ByteType, ShortType, UnsignedShortType, IntType, UnsignedIntType, FloatType, HalfFloatType, UnsignedShort4444Type, UnsignedShort5551Type, UnsignedInt248Type, AlphaFormat, RGBAFormat, LuminanceFormat, LuminanceAlphaFormat, DepthFormat, DepthStencilFormat, RedFormat, RedIntegerFormat, RGFormat, RGIntegerFormat, RGBAIntegerFormat, RGB_S3TC_DXT1_Format, RGBA_S3TC_DXT1_Format, RGBA_S3TC_DXT3_Format, RGBA_S3TC_DXT5_Format, RGB_PVRTC_4BPPV1_Format, RGB_PVRTC_2BPPV1_Format, RGBA_PVRTC_4BPPV1_Format, RGBA_PVRTC_2BPPV1_Format, RGB_ETC1_Format, RGB_ETC2_Format, RGBA_ETC2_EAC_Format, RGBA_ASTC_4x4_Format, RGBA_ASTC_5x4_Format, RGBA_ASTC_5x5_Format, RGBA_ASTC_6x5_Format, RGBA_ASTC_6x6_Format, RGBA_ASTC_8x5_Format, RGBA_ASTC_8x6_Format, RGBA_ASTC_8x8_Format, RGBA_ASTC_10x5_Format, RGBA_ASTC_10x6_Format, RGBA_ASTC_10x8_Format, RGBA_ASTC_10x10_Format, RGBA_ASTC_12x10_Format, RGBA_ASTC_12x12_Format, RGBA_BPTC_Format, RGB_BPTC_SIGNED_Format, RGB_BPTC_UNSIGNED_Format, RED_RGTC1_Format, SIGNED_RED_RGTC1_Format, RED_GREEN_RGTC2_Format, SIGNED_RED_GREEN_RGTC2_Format, InterpolateDiscrete, InterpolateLinear, InterpolateSmooth, ZeroCurvatureEnding, ZeroSlopeEnding, WrapAroundEnding, LinearEncoding, sRGBEncoding, BasicDepthPacking, RGBADepthPacking, TangentSpaceNormalMap, ObjectSpaceNormalMap, NoColorSpace, SRGBColorSpace, LinearSRGBColorSpace, DisplayP3ColorSpace, LinearDisplayP3ColorSpace, LinearTransfer, SRGBTransfer, Rec709Primaries, P3Primaries, KeepStencilOp, AlwaysStencilFunc, NeverCompare, LessCompare, EqualCompare, LessEqualCompare, GreaterCompare, NotEqualCompare, GreaterEqualCompare, AlwaysCompare, StaticDrawUsage, GLSL3, _SRGBAFormat, WebGLCoordinateSystem, WebGPUCoordinateSystem, EventDispatcher, _lut, _seed, DEG2RAD, RAD2DEG, MathUtils, Vector2, Matrix3, _m3, _cache, LINEAR_SRGB_TO_LINEAR_DISPLAY_P3, LINEAR_DISPLAY_P3_TO_LINEAR_SRGB, COLOR_SPACES, SUPPORTED_WORKING_COLOR_SPACES, ColorManagement, _canvas, ImageUtils, _sourceId, Source, _textureId, Texture, Vector4, RenderTarget, WebGLRenderTarget, DataArrayTexture, Data3DTexture, Quaternion, Vector3, _vector$c, _quaternion$4, Box3, _points, _vector$b, _box$4, _v0$2, _v1$7, _v2$4, _f0, _f1, _f2, _center, _extents, _triangleNormal, _testAxis, _box$3, _v1$6, _v2$3, Sphere, _vector$a, _segCenter, _segDir, _diff, _edge1, _edge2, _normal$1, Ray, Matrix4, _v1$5, _m1$2, _zero, _one, _x, _y, _z, _matrix$1, _quaternion$3, Euler, Layers, _object3DId, _v1$4, _q1, _m1$1, _target, _position$3, _scale$2, _quaternion$2, _xAxis, _yAxis, _zAxis, _addedEvent, _removedEvent, Object3D, _v0$1, _v1$3, _v2$2, _v3$1, _vab, _vac, _vbc, _vap, _vbp, _vcp, warnedGetUV, Triangle, _colorKeywords, _hslA, _hslB, Color, _color, _materialId, Material, MeshBasicMaterial, _vector$9, _vector2$1, BufferAttribute, Uint16BufferAttribute, Uint32BufferAttribute, Float32BufferAttribute, _id$2, _m1, _obj, _offset, _box$2, _boxMorphTargets, _vector$8, BufferGeometry, _inverseMatrix$3, _ray$3, _sphere$6, _sphereHitAt, _vA$1, _vB$1, _vC$1, _tempA, _morphA, _uvA$1, _uvB$1, _uvC$1, _normalA, _normalB, _normalC, _intersectionPoint, _intersectionPointWorld, Mesh, BoxGeometry, UniformsUtils, default_vertex, default_fragment, ShaderMaterial, Camera, PerspectiveCamera, fov, aspect, CubeCamera, CubeTexture, WebGLCubeRenderTarget, _vector1, _vector2, _normalMatrix, Plane, _sphere$5, _vector$7, Frustum, PlaneGeometry, alphahash_fragment, alphahash_pars_fragment, alphamap_fragment, alphamap_pars_fragment, alphatest_fragment, alphatest_pars_fragment, aomap_fragment, aomap_pars_fragment, batching_pars_vertex, batching_vertex, begin_vertex, beginnormal_vertex, bsdfs, iridescence_fragment, bumpmap_pars_fragment, clipping_planes_fragment, clipping_planes_pars_fragment, clipping_planes_pars_vertex, clipping_planes_vertex, color_fragment, color_pars_fragment, color_pars_vertex, color_vertex, common, cube_uv_reflection_fragment, defaultnormal_vertex, displacementmap_pars_vertex, displacementmap_vertex, emissivemap_fragment, emissivemap_pars_fragment, colorspace_fragment, colorspace_pars_fragment, envmap_fragment, envmap_common_pars_fragment, envmap_pars_fragment, envmap_pars_vertex, envmap_vertex, fog_vertex, fog_pars_vertex, fog_fragment, fog_pars_fragment, gradientmap_pars_fragment, lightmap_fragment, lightmap_pars_fragment, lights_lambert_fragment, lights_lambert_pars_fragment, lights_pars_begin, envmap_physical_pars_fragment, lights_toon_fragment, lights_toon_pars_fragment, lights_phong_fragment, lights_phong_pars_fragment, lights_physical_fragment, lights_physical_pars_fragment, lights_fragment_begin, lights_fragment_maps, lights_fragment_end, logdepthbuf_fragment, logdepthbuf_pars_fragment, logdepthbuf_pars_vertex, logdepthbuf_vertex, map_fragment, map_pars_fragment, map_particle_fragment, map_particle_pars_fragment, metalnessmap_fragment, metalnessmap_pars_fragment, morphcolor_vertex, morphnormal_vertex, morphtarget_pars_vertex, morphtarget_vertex, normal_fragment_begin, normal_fragment_maps, normal_pars_fragment, normal_pars_vertex, normal_vertex, normalmap_pars_fragment, clearcoat_normal_fragment_begin, clearcoat_normal_fragment_maps, clearcoat_pars_fragment, iridescence_pars_fragment, opaque_fragment, packing, premultiplied_alpha_fragment, project_vertex, dithering_fragment, dithering_pars_fragment, roughnessmap_fragment, roughnessmap_pars_fragment, shadowmap_pars_fragment, shadowmap_pars_vertex, shadowmap_vertex, shadowmask_pars_fragment, skinbase_vertex, skinning_pars_vertex, skinning_vertex, skinnormal_vertex, specularmap_fragment, specularmap_pars_fragment, tonemapping_fragment, tonemapping_pars_fragment, transmission_fragment, transmission_pars_fragment, uv_pars_fragment, uv_pars_vertex, uv_vertex, worldpos_vertex, vertex$h, fragment$h, vertex$g, fragment$g, vertex$f, fragment$f, vertex$e, fragment$e, vertex$d, fragment$d, vertex$c, fragment$c, vertex$b, fragment$b, vertex$a, fragment$a, vertex$9, fragment$9, vertex$8, fragment$8, vertex$7, fragment$7, vertex$6, fragment$6, vertex$5, fragment$5, vertex$4, fragment$4, vertex$3, fragment$3, vertex$2, fragment$2, vertex$1, fragment$1, ShaderChunk, UniformsLib, ShaderLib, _rgb, OrthographicCamera, LOD_MIN, EXTRA_LOD_SIGMA, MAX_SAMPLES, _flatCamera, _clearColor, _oldTarget, _oldActiveCubeFace, _oldActiveMipmapLevel, PHI, INV_PHI, _axisDirections, PMREMGenerator, DepthTexture, emptyTexture, emptyShadowTexture, emptyArrayTexture, empty3dTexture, emptyCubeTexture, arrayCacheF32, arrayCacheI32, mat4array, mat3array, mat2array, SingleUniform, PureArrayUniform, StructuredUniform, RePathPart, WebGLUniforms, COMPLETION_STATUS_KHR, programIdCount, includePattern, shaderChunkMap, unrollLoopPattern, _id$1, WebGLShaderCache, WebGLShaderStage, nextVersion, MeshDepthMaterial, MeshDistanceMaterial, vertex, fragment, ArrayCamera, Group, _moveEvent, WebXRController, WebXRManager, WebGLRenderer, WebGL1Renderer, Curve, tmp, px, py, pz, CatmullRomCurve3, Interpolant, CubicInterpolant, LinearInterpolant, DiscreteInterpolant, KeyframeTrack, BooleanKeyframeTrack, ColorKeyframeTrack, NumberKeyframeTrack, QuaternionLinearInterpolant, QuaternionKeyframeTrack, StringKeyframeTrack, VectorKeyframeTrack, LoadingManager, DefaultLoadingManager, Loader, _RESERVED_CHARS_RE, _reservedRe, _wordChar, _wordCharOrDot, _directoryRe, _nodeRe, _objectRe, _propertyRe, _trackRe, _supportedObjectNames, Composite, PropertyBinding, _controlInterpolantsResultBuffer;
 var init_three_module = __esm({
   "node_modules/three/build/three.module.js"() {
     REVISION = "160";
@@ -8351,17 +8377,17 @@ var init_three_module = __esm({
         return this;
       }
       transpose() {
-        let tmp;
+        let tmp2;
         const m = this.elements;
-        tmp = m[1];
+        tmp2 = m[1];
         m[1] = m[3];
-        m[3] = tmp;
-        tmp = m[2];
+        m[3] = tmp2;
+        tmp2 = m[2];
         m[2] = m[6];
-        m[6] = tmp;
-        tmp = m[5];
+        m[6] = tmp2;
+        tmp2 = m[5];
         m[5] = m[7];
-        m[7] = tmp;
+        m[7] = tmp2;
         return this;
       }
       getNormalMatrix(matrix4) {
@@ -11161,25 +11187,25 @@ var init_three_module = __esm({
       }
       transpose() {
         const te = this.elements;
-        let tmp;
-        tmp = te[1];
+        let tmp2;
+        tmp2 = te[1];
         te[1] = te[4];
-        te[4] = tmp;
-        tmp = te[2];
+        te[4] = tmp2;
+        tmp2 = te[2];
         te[2] = te[8];
-        te[8] = tmp;
-        tmp = te[6];
+        te[8] = tmp2;
+        tmp2 = te[6];
         te[6] = te[9];
-        te[9] = tmp;
-        tmp = te[3];
+        te[9] = tmp2;
+        tmp2 = te[3];
         te[3] = te[12];
-        te[12] = tmp;
-        tmp = te[7];
+        te[12] = tmp2;
+        tmp2 = te[7];
         te[7] = te[13];
-        te[13] = tmp;
-        tmp = te[11];
+        te[13] = tmp2;
+        tmp2 = te[11];
         te[11] = te[14];
-        te[14] = tmp;
+        te[14] = tmp2;
         return this;
       }
       setPosition(x, y, z) {
@@ -13896,20 +13922,20 @@ var init_three_module = __esm({
             );
           }
         }
-        const tmp = new Vector3(), tmp2 = new Vector3();
+        const tmp2 = new Vector3(), tmp22 = new Vector3();
         const n = new Vector3(), n2 = new Vector3();
         function handleVertex(v) {
           n.fromArray(normals, v * 3);
           n2.copy(n);
           const t = tan1[v];
-          tmp.copy(t);
-          tmp.sub(n.multiplyScalar(n.dot(t))).normalize();
-          tmp2.crossVectors(n2, t);
-          const test2 = tmp2.dot(tan2[v]);
+          tmp2.copy(t);
+          tmp2.sub(n.multiplyScalar(n.dot(t))).normalize();
+          tmp22.crossVectors(n2, t);
+          const test2 = tmp22.dot(tan2[v]);
           const w = test2 < 0 ? -1 : 1;
-          tangents[v * 4] = tmp.x;
-          tangents[v * 4 + 1] = tmp.y;
-          tangents[v * 4 + 2] = tmp.z;
+          tangents[v * 4] = tmp2.x;
+          tangents[v * 4 + 1] = tmp2.y;
+          tangents[v * 4 + 2] = tmp2.z;
           tangents[v * 4 + 3] = w;
         }
         for (let i = 0, il = groups.length; i < il; ++i) {
@@ -18537,6 +18563,307 @@ var init_three_module = __esm({
     WebGL1Renderer = class extends WebGLRenderer {
     };
     WebGL1Renderer.prototype.isWebGL1Renderer = true;
+    Curve = class {
+      constructor() {
+        this.type = "Curve";
+        this.arcLengthDivisions = 200;
+      }
+      // Virtual base class method to overwrite and implement in subclasses
+      //	- t [0 .. 1]
+      getPoint() {
+        console.warn("THREE.Curve: .getPoint() not implemented.");
+        return null;
+      }
+      // Get point at relative position in curve according to arc length
+      // - u [0 .. 1]
+      getPointAt(u, optionalTarget) {
+        const t = this.getUtoTmapping(u);
+        return this.getPoint(t, optionalTarget);
+      }
+      // Get sequence of points using getPoint( t )
+      getPoints(divisions = 5) {
+        const points = [];
+        for (let d = 0; d <= divisions; d++) {
+          points.push(this.getPoint(d / divisions));
+        }
+        return points;
+      }
+      // Get sequence of points using getPointAt( u )
+      getSpacedPoints(divisions = 5) {
+        const points = [];
+        for (let d = 0; d <= divisions; d++) {
+          points.push(this.getPointAt(d / divisions));
+        }
+        return points;
+      }
+      // Get total curve arc length
+      getLength() {
+        const lengths = this.getLengths();
+        return lengths[lengths.length - 1];
+      }
+      // Get list of cumulative segment lengths
+      getLengths(divisions = this.arcLengthDivisions) {
+        if (this.cacheArcLengths && this.cacheArcLengths.length === divisions + 1 && !this.needsUpdate) {
+          return this.cacheArcLengths;
+        }
+        this.needsUpdate = false;
+        const cache = [];
+        let current, last = this.getPoint(0);
+        let sum = 0;
+        cache.push(0);
+        for (let p = 1; p <= divisions; p++) {
+          current = this.getPoint(p / divisions);
+          sum += current.distanceTo(last);
+          cache.push(sum);
+          last = current;
+        }
+        this.cacheArcLengths = cache;
+        return cache;
+      }
+      updateArcLengths() {
+        this.needsUpdate = true;
+        this.getLengths();
+      }
+      // Given u ( 0 .. 1 ), get a t to find p. This gives you points which are equidistant
+      getUtoTmapping(u, distance) {
+        const arcLengths = this.getLengths();
+        let i = 0;
+        const il = arcLengths.length;
+        let targetArcLength;
+        if (distance) {
+          targetArcLength = distance;
+        } else {
+          targetArcLength = u * arcLengths[il - 1];
+        }
+        let low = 0, high = il - 1, comparison;
+        while (low <= high) {
+          i = Math.floor(low + (high - low) / 2);
+          comparison = arcLengths[i] - targetArcLength;
+          if (comparison < 0) {
+            low = i + 1;
+          } else if (comparison > 0) {
+            high = i - 1;
+          } else {
+            high = i;
+            break;
+          }
+        }
+        i = high;
+        if (arcLengths[i] === targetArcLength) {
+          return i / (il - 1);
+        }
+        const lengthBefore = arcLengths[i];
+        const lengthAfter = arcLengths[i + 1];
+        const segmentLength = lengthAfter - lengthBefore;
+        const segmentFraction = (targetArcLength - lengthBefore) / segmentLength;
+        const t = (i + segmentFraction) / (il - 1);
+        return t;
+      }
+      // Returns a unit vector tangent at t
+      // In case any sub curve does not implement its tangent derivation,
+      // 2 points a small delta apart will be used to find its gradient
+      // which seems to give a reasonable approximation
+      getTangent(t, optionalTarget) {
+        const delta = 1e-4;
+        let t1 = t - delta;
+        let t2 = t + delta;
+        if (t1 < 0) t1 = 0;
+        if (t2 > 1) t2 = 1;
+        const pt1 = this.getPoint(t1);
+        const pt2 = this.getPoint(t2);
+        const tangent = optionalTarget || (pt1.isVector2 ? new Vector2() : new Vector3());
+        tangent.copy(pt2).sub(pt1).normalize();
+        return tangent;
+      }
+      getTangentAt(u, optionalTarget) {
+        const t = this.getUtoTmapping(u);
+        return this.getTangent(t, optionalTarget);
+      }
+      computeFrenetFrames(segments, closed) {
+        const normal = new Vector3();
+        const tangents = [];
+        const normals = [];
+        const binormals = [];
+        const vec = new Vector3();
+        const mat = new Matrix4();
+        for (let i = 0; i <= segments; i++) {
+          const u = i / segments;
+          tangents[i] = this.getTangentAt(u, new Vector3());
+        }
+        normals[0] = new Vector3();
+        binormals[0] = new Vector3();
+        let min = Number.MAX_VALUE;
+        const tx = Math.abs(tangents[0].x);
+        const ty = Math.abs(tangents[0].y);
+        const tz = Math.abs(tangents[0].z);
+        if (tx <= min) {
+          min = tx;
+          normal.set(1, 0, 0);
+        }
+        if (ty <= min) {
+          min = ty;
+          normal.set(0, 1, 0);
+        }
+        if (tz <= min) {
+          normal.set(0, 0, 1);
+        }
+        vec.crossVectors(tangents[0], normal).normalize();
+        normals[0].crossVectors(tangents[0], vec);
+        binormals[0].crossVectors(tangents[0], normals[0]);
+        for (let i = 1; i <= segments; i++) {
+          normals[i] = normals[i - 1].clone();
+          binormals[i] = binormals[i - 1].clone();
+          vec.crossVectors(tangents[i - 1], tangents[i]);
+          if (vec.length() > Number.EPSILON) {
+            vec.normalize();
+            const theta = Math.acos(clamp(tangents[i - 1].dot(tangents[i]), -1, 1));
+            normals[i].applyMatrix4(mat.makeRotationAxis(vec, theta));
+          }
+          binormals[i].crossVectors(tangents[i], normals[i]);
+        }
+        if (closed === true) {
+          let theta = Math.acos(clamp(normals[0].dot(normals[segments]), -1, 1));
+          theta /= segments;
+          if (tangents[0].dot(vec.crossVectors(normals[0], normals[segments])) > 0) {
+            theta = -theta;
+          }
+          for (let i = 1; i <= segments; i++) {
+            normals[i].applyMatrix4(mat.makeRotationAxis(tangents[i], theta * i));
+            binormals[i].crossVectors(tangents[i], normals[i]);
+          }
+        }
+        return {
+          tangents,
+          normals,
+          binormals
+        };
+      }
+      clone() {
+        return new this.constructor().copy(this);
+      }
+      copy(source) {
+        this.arcLengthDivisions = source.arcLengthDivisions;
+        return this;
+      }
+      toJSON() {
+        const data = {
+          metadata: {
+            version: 4.6,
+            type: "Curve",
+            generator: "Curve.toJSON"
+          }
+        };
+        data.arcLengthDivisions = this.arcLengthDivisions;
+        data.type = this.type;
+        return data;
+      }
+      fromJSON(json) {
+        this.arcLengthDivisions = json.arcLengthDivisions;
+        return this;
+      }
+    };
+    tmp = /* @__PURE__ */ new Vector3();
+    px = /* @__PURE__ */ new CubicPoly();
+    py = /* @__PURE__ */ new CubicPoly();
+    pz = /* @__PURE__ */ new CubicPoly();
+    CatmullRomCurve3 = class extends Curve {
+      constructor(points = [], closed = false, curveType = "centripetal", tension = 0.5) {
+        super();
+        this.isCatmullRomCurve3 = true;
+        this.type = "CatmullRomCurve3";
+        this.points = points;
+        this.closed = closed;
+        this.curveType = curveType;
+        this.tension = tension;
+      }
+      getPoint(t, optionalTarget = new Vector3()) {
+        const point = optionalTarget;
+        const points = this.points;
+        const l = points.length;
+        const p = (l - (this.closed ? 0 : 1)) * t;
+        let intPoint = Math.floor(p);
+        let weight = p - intPoint;
+        if (this.closed) {
+          intPoint += intPoint > 0 ? 0 : (Math.floor(Math.abs(intPoint) / l) + 1) * l;
+        } else if (weight === 0 && intPoint === l - 1) {
+          intPoint = l - 2;
+          weight = 1;
+        }
+        let p0, p3;
+        if (this.closed || intPoint > 0) {
+          p0 = points[(intPoint - 1) % l];
+        } else {
+          tmp.subVectors(points[0], points[1]).add(points[0]);
+          p0 = tmp;
+        }
+        const p1 = points[intPoint % l];
+        const p2 = points[(intPoint + 1) % l];
+        if (this.closed || intPoint + 2 < l) {
+          p3 = points[(intPoint + 2) % l];
+        } else {
+          tmp.subVectors(points[l - 1], points[l - 2]).add(points[l - 1]);
+          p3 = tmp;
+        }
+        if (this.curveType === "centripetal" || this.curveType === "chordal") {
+          const pow = this.curveType === "chordal" ? 0.5 : 0.25;
+          let dt0 = Math.pow(p0.distanceToSquared(p1), pow);
+          let dt1 = Math.pow(p1.distanceToSquared(p2), pow);
+          let dt2 = Math.pow(p2.distanceToSquared(p3), pow);
+          if (dt1 < 1e-4) dt1 = 1;
+          if (dt0 < 1e-4) dt0 = dt1;
+          if (dt2 < 1e-4) dt2 = dt1;
+          px.initNonuniformCatmullRom(p0.x, p1.x, p2.x, p3.x, dt0, dt1, dt2);
+          py.initNonuniformCatmullRom(p0.y, p1.y, p2.y, p3.y, dt0, dt1, dt2);
+          pz.initNonuniformCatmullRom(p0.z, p1.z, p2.z, p3.z, dt0, dt1, dt2);
+        } else if (this.curveType === "catmullrom") {
+          px.initCatmullRom(p0.x, p1.x, p2.x, p3.x, this.tension);
+          py.initCatmullRom(p0.y, p1.y, p2.y, p3.y, this.tension);
+          pz.initCatmullRom(p0.z, p1.z, p2.z, p3.z, this.tension);
+        }
+        point.set(
+          px.calc(weight),
+          py.calc(weight),
+          pz.calc(weight)
+        );
+        return point;
+      }
+      copy(source) {
+        super.copy(source);
+        this.points = [];
+        for (let i = 0, l = source.points.length; i < l; i++) {
+          const point = source.points[i];
+          this.points.push(point.clone());
+        }
+        this.closed = source.closed;
+        this.curveType = source.curveType;
+        this.tension = source.tension;
+        return this;
+      }
+      toJSON() {
+        const data = super.toJSON();
+        data.points = [];
+        for (let i = 0, l = this.points.length; i < l; i++) {
+          const point = this.points[i];
+          data.points.push(point.toArray());
+        }
+        data.closed = this.closed;
+        data.curveType = this.curveType;
+        data.tension = this.tension;
+        return data;
+      }
+      fromJSON(json) {
+        super.fromJSON(json);
+        this.points = [];
+        for (let i = 0, l = json.points.length; i < l; i++) {
+          const point = json.points[i];
+          this.points.push(new Vector3().fromArray(point));
+        }
+        this.closed = json.closed;
+        this.curveType = json.curveType;
+        this.tension = json.tension;
+        return this;
+      }
+    };
     Interpolant = class {
       constructor(parameterPositions, sampleValues, sampleSize, resultBuffer) {
         this.parameterPositions = parameterPositions;
@@ -19652,6 +19979,614 @@ var init_VehiclePhysics = __esm({
   }
 });
 
+// src/engine/world/RoadNetwork.ts
+var RoadNetwork_exports = {};
+__export(RoadNetwork_exports, {
+  RoadNetwork: () => RoadNetwork
+});
+var RoadNetwork;
+var init_RoadNetwork = __esm({
+  "src/engine/world/RoadNetwork.ts"() {
+    init_three_module();
+    RoadNetwork = class {
+      nodes = /* @__PURE__ */ new Map();
+      edges = /* @__PURE__ */ new Map();
+      constructor() {
+        this.buildCityNetwork();
+      }
+      addNode(id, x, z, type, district, hasSignal = false) {
+        const node = {
+          id,
+          pos: new Vector2(x, z),
+          type,
+          district,
+          connections: [],
+          hasSignal
+        };
+        this.nodes.set(id, node);
+        return node;
+      }
+      addEdge(id, fromNodeId, toNodeId, controlPoints, width, lanes, speedLimitKmh, type, district, isOneWay = false, isElevated = false, elevationHeight = 0) {
+        const curve = new CatmullRomCurve3(controlPoints, false, "catmullrom", 0.2);
+        const length = curve.getLength();
+        const edge = {
+          id,
+          fromNodeId,
+          toNodeId,
+          curve,
+          width,
+          lanes,
+          speedLimitKmh,
+          isOneWay,
+          type,
+          district,
+          isElevated,
+          elevationHeight,
+          length
+        };
+        this.edges.set(id, edge);
+        const fromNode = this.nodes.get(fromNodeId);
+        const toNode = this.nodes.get(toNodeId);
+        if (fromNode && !fromNode.connections.includes(id)) fromNode.connections.push(id);
+        if (toNode && !toNode.connections.includes(id)) toNode.connections.push(id);
+        return edge;
+      }
+      /**
+       * Constructs the connected procedural Indian city road graph.
+       * Total city footprint: ~360m x 360m.
+       */
+      buildCityNetwork() {
+        this.addNode("N_CENTER", 0, 0, "INTERSECTION_4WAY", "COMMERCIAL_MARKET", true);
+        this.addNode("N_NORTH", 0, -60, "INTERSECTION_4WAY", "SCHOOL_ZONE", true);
+        this.addNode("N_SOUTH", 0, 60, "INTERSECTION_4WAY", "RESIDENTIAL_COLONY", true);
+        this.addNode("N_WEST", -60, 0, "T_JUNCTION", "HERITAGE_QUARTER", true);
+        this.addNode("N_EAST", 60, 0, "T_JUNCTION", "IT_PARK", true);
+        this.addNode("R_NORTH", 60, 44, "ROUNDABOUT_NODE", "IT_PARK");
+        this.addNode("R_EAST", 76, 60, "ROUNDABOUT_NODE", "IT_PARK");
+        this.addNode("R_SOUTH", 60, 76, "ROUNDABOUT_NODE", "IT_PARK");
+        this.addNode("R_WEST", 44, 60, "ROUNDABOUT_NODE", "IT_PARK");
+        this.addNode("HOSP_MAIN", -60, 60, "INTERSECTION_4WAY", "HOSPITAL_DISTRICT", true);
+        this.addNode("HOSP_EMERGENCY", -85, 60, "DEAD_END", "HOSPITAL_DISTRICT");
+        this.addNode("HOSP_GATE", -60, 85, "T_JUNCTION", "HOSPITAL_DISTRICT");
+        this.addNode("SCH_GATE", 0, -85, "DEAD_END", "SCHOOL_ZONE");
+        this.addNode("SCH_WEST", -60, -60, "INTERSECTION_4WAY", "SCHOOL_ZONE", true);
+        this.addNode("HERIT_TEMPLE", -85, -60, "T_JUNCTION", "HERITAGE_QUARTER");
+        this.addNode("HERIT_ALLEY_S", -85, -20, "DEAD_END", "HERITAGE_QUARTER");
+        this.addNode("HERIT_ALLEY_N", -85, -90, "T_JUNCTION", "HERITAGE_QUARTER");
+        this.addNode("BAZAAR_WEST", -30, 0, "T_JUNCTION", "COMMERCIAL_MARKET");
+        this.addNode("BAZAAR_EAST", 30, 0, "T_JUNCTION", "COMMERCIAL_MARKET");
+        this.addNode("BAZAAR_ALLEY", 25, -25, "T_JUNCTION", "COMMERCIAL_MARKET");
+        this.addNode("HWY_NW", -60, -120, "CURVE_NODE", "RING_ROAD_HIGHWAY");
+        this.addNode("HWY_N", 0, -135, "CURVE_NODE", "RING_ROAD_HIGHWAY");
+        this.addNode("HWY_NE", 80, -120, "CURVE_NODE", "RING_ROAD_HIGHWAY");
+        this.addNode("HWY_E", 120, -40, "CURVE_NODE", "RING_ROAD_HIGHWAY");
+        this.addNode("HWY_SE", 120, 60, "CURVE_NODE", "RING_ROAD_HIGHWAY");
+        this.addNode("HWY_S", 60, 120, "CURVE_NODE", "RING_ROAD_HIGHWAY");
+        this.addNode("HWY_SW", -60, 120, "CURVE_NODE", "RING_ROAD_HIGHWAY");
+        this.addNode("FLY_START", 40, -30, "CURVE_NODE", "IT_PARK");
+        this.addNode("FLY_MID", 0, -30, "CURVE_NODE", "COMMERCIAL_MARKET");
+        this.addNode("FLY_END", -40, -30, "CURVE_NODE", "HERITAGE_QUARTER");
+        this.addEdge(
+          "E_MG_WEST",
+          "N_WEST",
+          "N_CENTER",
+          [
+            new Vector3(-60, 0, 0),
+            new Vector3(-30, 0, 0),
+            new Vector3(0, 0, 0)
+          ],
+          14,
+          4,
+          45,
+          "ARTERIAL",
+          "COMMERCIAL_MARKET"
+        );
+        this.addEdge(
+          "E_MG_EAST",
+          "N_CENTER",
+          "N_EAST",
+          [
+            new Vector3(0, 0, 0),
+            new Vector3(30, 0, 0),
+            new Vector3(60, 0, 0)
+          ],
+          14,
+          4,
+          45,
+          "ARTERIAL",
+          "COMMERCIAL_MARKET"
+        );
+        this.addEdge(
+          "E_CENTRAL_N",
+          "N_CENTER",
+          "N_NORTH",
+          [
+            new Vector3(0, 0, 0),
+            new Vector3(0, 0, -30),
+            new Vector3(0, 0, -60)
+          ],
+          14,
+          4,
+          40,
+          "ARTERIAL",
+          "COMMERCIAL_MARKET"
+        );
+        this.addEdge(
+          "E_CENTRAL_S",
+          "N_CENTER",
+          "N_SOUTH",
+          [
+            new Vector3(0, 0, 0),
+            new Vector3(0, 0, 30),
+            new Vector3(0, 0, 60)
+          ],
+          14,
+          4,
+          40,
+          "ARTERIAL",
+          "RESIDENTIAL_COLONY"
+        );
+        this.addEdge(
+          "E_R_N_E",
+          "R_NORTH",
+          "R_EAST",
+          [
+            new Vector3(60, 0, 44),
+            new Vector3(71.3, 0, 48.7),
+            new Vector3(76, 0, 60)
+          ],
+          12,
+          2,
+          30,
+          "ROUNDABOUT",
+          "IT_PARK"
+        );
+        this.addEdge(
+          "E_R_E_S",
+          "R_EAST",
+          "R_SOUTH",
+          [
+            new Vector3(76, 0, 60),
+            new Vector3(71.3, 0, 71.3),
+            new Vector3(60, 0, 76)
+          ],
+          12,
+          2,
+          30,
+          "ROUNDABOUT",
+          "IT_PARK"
+        );
+        this.addEdge(
+          "E_R_S_W",
+          "R_SOUTH",
+          "R_WEST",
+          [
+            new Vector3(60, 0, 76),
+            new Vector3(48.7, 0, 71.3),
+            new Vector3(44, 0, 60)
+          ],
+          12,
+          2,
+          30,
+          "ROUNDABOUT",
+          "IT_PARK"
+        );
+        this.addEdge(
+          "E_R_W_N",
+          "R_WEST",
+          "R_NORTH",
+          [
+            new Vector3(44, 0, 60),
+            new Vector3(48.7, 0, 48.7),
+            new Vector3(60, 0, 44)
+          ],
+          12,
+          2,
+          30,
+          "ROUNDABOUT",
+          "IT_PARK"
+        );
+        this.addEdge(
+          "E_EAST_TO_R",
+          "N_EAST",
+          "R_NORTH",
+          [
+            new Vector3(60, 0, 0),
+            new Vector3(60, 0, 22),
+            new Vector3(60, 0, 44)
+          ],
+          12,
+          2,
+          40,
+          "ARTERIAL",
+          "IT_PARK"
+        );
+        this.addEdge(
+          "E_SOUTH_TO_R",
+          "N_SOUTH",
+          "R_WEST",
+          [
+            new Vector3(0, 0, 60),
+            new Vector3(22, 0, 60),
+            new Vector3(44, 0, 60)
+          ],
+          12,
+          2,
+          40,
+          "RESIDENTIAL",
+          "RESIDENTIAL_COLONY"
+        );
+        this.addEdge(
+          "E_SOUTH_TO_HOSP",
+          "N_SOUTH",
+          "HOSP_MAIN",
+          [
+            new Vector3(0, 0, 60),
+            new Vector3(-30, 0, 60),
+            new Vector3(-60, 0, 60)
+          ],
+          14,
+          4,
+          45,
+          "ARTERIAL",
+          "HOSPITAL_DISTRICT"
+        );
+        this.addEdge(
+          "E_HOSP_EMERGENCY_BAY",
+          "HOSP_MAIN",
+          "HOSP_EMERGENCY",
+          [
+            new Vector3(-60, 0, 60),
+            new Vector3(-72, 0, 60),
+            new Vector3(-85, 0, 60)
+          ],
+          10,
+          2,
+          30,
+          "COMMERCIAL",
+          "HOSPITAL_DISTRICT"
+        );
+        this.addEdge(
+          "E_HOSP_TO_WEST",
+          "HOSP_MAIN",
+          "N_WEST",
+          [
+            new Vector3(-60, 0, 60),
+            new Vector3(-60, 0, 30),
+            new Vector3(-60, 0, 0)
+          ],
+          12,
+          2,
+          40,
+          "RESIDENTIAL",
+          "HOSPITAL_DISTRICT"
+        );
+        this.addEdge(
+          "E_NORTH_TO_SCH_GATE",
+          "N_NORTH",
+          "SCH_GATE",
+          [
+            new Vector3(0, 0, -60),
+            new Vector3(0, 0, -72),
+            new Vector3(0, 0, -85)
+          ],
+          10,
+          2,
+          30,
+          // Strict 30 km/h
+          "RESIDENTIAL",
+          "SCHOOL_ZONE"
+        );
+        this.addEdge(
+          "E_NORTH_TO_SCH_WEST",
+          "N_NORTH",
+          "SCH_WEST",
+          [
+            new Vector3(0, 0, -60),
+            new Vector3(-30, 0, -60),
+            new Vector3(-60, 0, -60)
+          ],
+          12,
+          2,
+          30,
+          // School Zone speed limit
+          "COMMERCIAL",
+          "SCHOOL_ZONE"
+        );
+        this.addEdge(
+          "E_SCH_WEST_TO_NW",
+          "SCH_WEST",
+          "N_WEST",
+          [
+            new Vector3(-60, 0, -60),
+            new Vector3(-60, 0, -30),
+            new Vector3(-60, 0, 0)
+          ],
+          12,
+          2,
+          40,
+          "COMMERCIAL",
+          "HERITAGE_QUARTER"
+        );
+        this.addEdge(
+          "E_HERIT_TEMPLE_LANE",
+          "SCH_WEST",
+          "HERIT_TEMPLE",
+          [
+            new Vector3(-60, 0, -60),
+            new Vector3(-72, 0, -55),
+            new Vector3(-85, 0, -60)
+          ],
+          8,
+          2,
+          25,
+          "ALLEY",
+          "HERITAGE_QUARTER"
+        );
+        this.addEdge(
+          "E_HERIT_ALLEY_S",
+          "HERIT_TEMPLE",
+          "HERIT_ALLEY_S",
+          [
+            new Vector3(-85, 0, -60),
+            new Vector3(-90, 0, -40),
+            new Vector3(-85, 0, -20)
+          ],
+          7,
+          1,
+          25,
+          "ALLEY",
+          "HERITAGE_QUARTER",
+          true
+          // One-way!
+        );
+        this.addEdge(
+          "E_HWY_NORTH_ARC",
+          "HWY_NW",
+          "HWY_N",
+          [
+            new Vector3(-60, 0, -120),
+            new Vector3(-30, 0, -132),
+            new Vector3(0, 0, -135)
+          ],
+          18,
+          4,
+          50,
+          "HIGHWAY",
+          "RING_ROAD_HIGHWAY"
+        );
+        this.addEdge(
+          "E_HWY_NE_ARC",
+          "HWY_N",
+          "HWY_NE",
+          [
+            new Vector3(0, 0, -135),
+            new Vector3(45, 0, -132),
+            new Vector3(80, 0, -120)
+          ],
+          18,
+          4,
+          50,
+          "HIGHWAY",
+          "RING_ROAD_HIGHWAY"
+        );
+        this.addEdge(
+          "E_HWY_EAST_ARC",
+          "HWY_NE",
+          "HWY_E",
+          [
+            new Vector3(80, 0, -120),
+            new Vector3(110, 0, -85),
+            new Vector3(120, 0, -40)
+          ],
+          18,
+          4,
+          50,
+          "HIGHWAY",
+          "RING_ROAD_HIGHWAY"
+        );
+        this.addEdge(
+          "E_HWY_SE_ARC",
+          "HWY_E",
+          "HWY_SE",
+          [
+            new Vector3(120, 0, -40),
+            new Vector3(122, 0, 10),
+            new Vector3(120, 0, 60)
+          ],
+          18,
+          4,
+          50,
+          "HIGHWAY",
+          "RING_ROAD_HIGHWAY"
+        );
+        this.addEdge(
+          "E_HWY_SOUTH_ARC",
+          "HWY_SE",
+          "HWY_S",
+          [
+            new Vector3(120, 0, 60),
+            new Vector3(95, 0, 100),
+            new Vector3(60, 0, 120)
+          ],
+          18,
+          4,
+          50,
+          "HIGHWAY",
+          "RING_ROAD_HIGHWAY"
+        );
+        this.addEdge(
+          "E_HWY_FEEDER_E",
+          "R_EAST",
+          "HWY_SE",
+          [
+            new Vector3(76, 0, 60),
+            new Vector3(98, 0, 60),
+            new Vector3(120, 0, 60)
+          ],
+          14,
+          4,
+          45,
+          "ARTERIAL",
+          "IT_PARK"
+        );
+        this.addEdge(
+          "E_HWY_FEEDER_N",
+          "SCH_GATE",
+          "HWY_N",
+          [
+            new Vector3(0, 0, -85),
+            new Vector3(0, 0, -110),
+            new Vector3(0, 0, -135)
+          ],
+          14,
+          4,
+          45,
+          "ARTERIAL",
+          "SCHOOL_ZONE"
+        );
+        this.addEdge(
+          "E_FLYOVER",
+          "FLY_START",
+          "FLY_END",
+          [
+            new Vector3(40, 0, -30),
+            new Vector3(20, 4.5, -30),
+            new Vector3(0, 4.5, -30),
+            new Vector3(-20, 4.5, -30),
+            new Vector3(-40, 0, -30)
+          ],
+          12,
+          2,
+          45,
+          "BRIDGE",
+          "COMMERCIAL_MARKET",
+          false,
+          true,
+          4.5
+        );
+      }
+      /**
+       * Finds the closest RoadNode to any (x, z) world position.
+       */
+      findClosestNode(x, z) {
+        let closest = null;
+        let minDistSq = Infinity;
+        for (const node of this.nodes.values()) {
+          const dx = node.pos.x - x;
+          const dz = node.pos.y - z;
+          const distSq = dx * dx + dz * dz;
+          if (distSq < minDistSq) {
+            minDistSq = distSq;
+            closest = node;
+          }
+        }
+        return closest || this.nodes.get("N_CENTER");
+      }
+      /**
+       * Finds the closest point on any road edge for legal routing.
+       */
+      findClosestRoadPoint(x, z) {
+        let bestPoint = new Vector3(x, 0, z);
+        let bestEdge = Array.from(this.edges.values())[0];
+        let minDistSq = Infinity;
+        const testVec = new Vector3(x, 0, z);
+        for (const edge of this.edges.values()) {
+          const samples = 12;
+          for (let i = 0; i <= samples; i++) {
+            const pt = edge.curve.getPoint(i / samples);
+            const distSq = pt.distanceToSquared(testVec);
+            if (distSq < minDistSq) {
+              minDistSq = distSq;
+              bestPoint = pt;
+              bestEdge = edge;
+            }
+          }
+        }
+        return { point: bestPoint, edge: bestEdge };
+      }
+      /**
+       * A* (A-Star) Pathfinding between any two world positions.
+       * Returns a smooth list of points following the actual roads.
+       */
+      findPath(startPos, endPos) {
+        const startNode = this.findClosestNode(startPos[0], startPos[1]);
+        const endNode = this.findClosestNode(endPos[0], endPos[1]);
+        if (startNode.id === endNode.id) {
+          return [
+            new Vector3(startPos[0], 0, startPos[1]),
+            new Vector3(endPos[0], 0, endPos[1])
+          ];
+        }
+        const openSet = /* @__PURE__ */ new Set([startNode.id]);
+        const cameFrom = /* @__PURE__ */ new Map();
+        const gScore = /* @__PURE__ */ new Map();
+        gScore.set(startNode.id, 0);
+        const fScore = /* @__PURE__ */ new Map();
+        fScore.set(startNode.id, startNode.pos.distanceTo(endNode.pos));
+        while (openSet.size > 0) {
+          let currentId = "";
+          let lowestF = Infinity;
+          for (const id of openSet) {
+            const f = fScore.get(id) ?? Infinity;
+            if (f < lowestF) {
+              lowestF = f;
+              currentId = id;
+            }
+          }
+          if (currentId === endNode.id) {
+            const fullPoints = [];
+            let curr = endNode.id;
+            const segmentEdges = [];
+            while (cameFrom.has(curr)) {
+              const step = cameFrom.get(curr);
+              const edge = this.edges.get(step.edgeId);
+              if (edge) segmentEdges.unshift(edge);
+              curr = step.nodeId;
+            }
+            fullPoints.push(new Vector3(startPos[0], 0, startPos[1]));
+            for (const edge of segmentEdges) {
+              const pts = edge.curve.getPoints(8);
+              fullPoints.push(...pts);
+            }
+            fullPoints.push(new Vector3(endPos[0], 0, endPos[1]));
+            return fullPoints;
+          }
+          openSet.delete(currentId);
+          const currentNode = this.nodes.get(currentId);
+          const currentG = gScore.get(currentId) ?? Infinity;
+          for (const edgeId of currentNode.connections) {
+            const edge = this.edges.get(edgeId);
+            if (!edge) continue;
+            if (edge.isOneWay && edge.fromNodeId !== currentId) continue;
+            const neighborId = edge.fromNodeId === currentId ? edge.toNodeId : edge.fromNodeId;
+            const neighborNode = this.nodes.get(neighborId);
+            if (!neighborNode) continue;
+            const tentativeG = currentG + edge.length;
+            if (tentativeG < (gScore.get(neighborId) ?? Infinity)) {
+              cameFrom.set(neighborId, { nodeId: currentId, edgeId });
+              gScore.set(neighborId, tentativeG);
+              fScore.set(neighborId, tentativeG + neighborNode.pos.distanceTo(endNode.pos));
+              openSet.add(neighborId);
+            }
+          }
+        }
+        return [
+          new Vector3(startPos[0], 0, startPos[1]),
+          new Vector3(endPos[0], 0, endPos[1])
+        ];
+      }
+      /**
+       * Returns current regulatory speed limit for a given position.
+       */
+      getSpeedLimitAt(x, z) {
+        const { edge } = this.findClosestRoadPoint(x, z);
+        return edge ? edge.speedLimitKmh : 40;
+      }
+    };
+  }
+});
+
 // tests/run_tests.mjs
 import test from "node:test";
 import assert from "node:assert/strict";
@@ -19745,9 +20680,9 @@ var TrafficRuleEngine = class {
     }
     const light = telemetry.nearestIntersection;
     if (light) {
-      const [px, , pz] = telemetry.position;
+      const [px2, , pz2] = telemetry.position;
       const [sx, , sz] = light.stopLinePos;
-      const distToStopLine = Math.hypot(px - sx, pz - sz);
+      const distToStopLine = Math.hypot(px2 - sx, pz2 - sz);
       if (distToStopLine < 12) {
         if (light.state === "RED") {
           if (distToStopLine < 6.5 && telemetry.speedKmh > 8) {
@@ -20361,6 +21296,62 @@ test("11. Vehicle Physics: Distinct Braking & Drift Elimination", async () => {
 test("12. Firebase Configuration Helper Validation", async () => {
   const { isFirebaseConfigured: isFirebaseConfigured2 } = await Promise.resolve().then(() => (init_firebase(), firebase_exports));
   assert.equal(typeof isFirebaseConfigured2(), "boolean");
+});
+test("13. Connected Road Network: Nodes, Edges & Districts", async () => {
+  const { RoadNetwork: RoadNetwork2 } = await Promise.resolve().then(() => (init_RoadNetwork(), RoadNetwork_exports));
+  const network = new RoadNetwork2();
+  assert.ok(network.nodes.size >= 20, `Network must have at least 20 nodes, got ${network.nodes.size}`);
+  assert.ok(network.edges.size >= 20, `Network must have at least 20 edges, got ${network.edges.size}`);
+  assert.ok(network.nodes.has("N_CENTER"), "Center intersection node N_CENTER must exist");
+  assert.ok(network.nodes.has("R_NORTH"), "Roundabout node R_NORTH must exist");
+  assert.ok(network.nodes.has("HOSP_MAIN"), "Hospital district node HOSP_MAIN must exist");
+  assert.ok(network.nodes.has("SCH_GATE"), "School zone node SCH_GATE must exist");
+  assert.ok(network.nodes.has("HERIT_TEMPLE"), "Heritage quarter node HERIT_TEMPLE must exist");
+  for (const [id, edge] of network.edges) {
+    assert.ok(edge.length > 0, `Edge ${id} must have positive length`);
+    assert.ok(edge.curve, `Edge ${id} must have valid CatmullRom spline`);
+    assert.ok(edge.width >= 6, `Edge ${id} width must be at least 6m`);
+  }
+  const schoolEdge = network.edges.get("E_NORTH_TO_SCH_GATE");
+  assert.ok(schoolEdge, "School edge must exist");
+  assert.equal(schoolEdge.speedLimitKmh, 30, "School zone must have 30 km/h speed limit");
+  const flyoverEdge = network.edges.get("E_FLYOVER");
+  assert.ok(flyoverEdge, "Flyover edge must exist");
+  assert.ok(flyoverEdge.isElevated, "Flyover segment must be elevated");
+  assert.equal(flyoverEdge.elevationHeight, 4.5, "Flyover elevation must be 4.5m");
+});
+test("14. Navigation Graph: A* Pathfinding Between Districts & One-Way Respect", async () => {
+  const { RoadNetwork: RoadNetwork2 } = await Promise.resolve().then(() => (init_RoadNetwork(), RoadNetwork_exports));
+  const network = new RoadNetwork2();
+  const path1 = network.findPath([0, 0], [60, 60]);
+  assert.ok(path1.length >= 3, `A* path to IT Park must have multiple waypoints along road, got ${path1.length}`);
+  const path2 = network.findPath([0, -75], [-70, 60]);
+  assert.ok(path2.length >= 4, `A* path from School to Hospital must navigate road graph, got ${path2.length}`);
+  const nearest = network.findClosestRoadPoint(2, 5);
+  assert.ok(nearest.point, "Closest road point must be found");
+  assert.ok(nearest.edge, "Closest road edge must be found");
+});
+test("15. Mission Reachability: All 10 Delivery Missions Reachable Via Road Graph", async () => {
+  const { RoadNetwork: RoadNetwork2 } = await Promise.resolve().then(() => (init_RoadNetwork(), RoadNetwork_exports));
+  const network = new RoadNetwork2();
+  for (const mission of MISSIONS) {
+    const pickupPath = network.findPath([0, 0], [mission.pickupPos[0], mission.pickupPos[2]]);
+    assert.ok(
+      pickupPath.length >= 2,
+      `Mission ${mission.id} (${mission.title}) pickup at [${mission.pickupPos[0]}, ${mission.pickupPos[2]}] must be reachable`
+    );
+    for (let d = 0; d < mission.dropoffLocations.length; d++) {
+      const dropoff = mission.dropoffLocations[d];
+      const dropoffPath = network.findPath(
+        [mission.pickupPos[0], mission.pickupPos[2]],
+        [dropoff[0], dropoff[2]]
+      );
+      assert.ok(
+        dropoffPath.length >= 2,
+        `Mission ${mission.id} dropoff #${d + 1} at [${dropoff[0]}, ${dropoff[2]}] must be reachable`
+      );
+    }
+  }
 });
 /*! Bundled license information:
 

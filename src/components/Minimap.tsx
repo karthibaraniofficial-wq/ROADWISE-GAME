@@ -1,15 +1,9 @@
-// ROADWISE — Real-time 2D Canvas Minimap with Dynamic Route Line
+// ROADWISE — Real-time 2D Canvas Minimap with Dynamic Route Line & Road Network
 import React, { useEffect, useRef } from 'react';
+import { MinimapData } from '../types/game';
 
 interface MinimapProps {
-  getMinimapData: () => {
-    playerPos: [number, number];
-    playerHeading: number;
-    pickupPos: [number, number];
-    dropoffPos: [number, number] | null;
-    trafficLights: { pos: [number, number]; state: string }[];
-    aiCars: { pos: [number, number]; isAmbulance: boolean }[];
-  };
+  getMinimapData: () => MinimapData;
   isPickupComplete: boolean;
 }
 
@@ -33,11 +27,11 @@ export const Minimap: React.FC<MinimapProps> = ({ getMinimapData, isPickupComple
       const [px, pz] = data.playerPos;
 
       // Clear radar background
-      ctx.fillStyle = 'rgba(15, 23, 42, 0.9)';
+      ctx.fillStyle = 'rgba(15, 23, 42, 0.92)';
       ctx.fillRect(0, 0, size, size);
 
       // Radar circular mask / border
-      ctx.strokeStyle = 'rgba(56, 189, 248, 0.35)';
+      ctx.strokeStyle = 'rgba(56, 189, 248, 0.4)';
       ctx.lineWidth = 1.5;
       ctx.strokeRect(1, 1, size - 2, size - 2);
 
@@ -45,24 +39,55 @@ export const Minimap: React.FC<MinimapProps> = ({ getMinimapData, isPickupComple
       ctx.save();
       ctx.translate(size / 2, size / 2);
 
-      // Scale: 1 unit in 3D = 1.1 pixels on minimap
-      const scale = 1.1;
+      // Scale: 1 unit in 3D = 0.85 pixels on minimap (~180m visible window)
+      const scale = 0.85;
 
-      // 1. Draw Grid Roads
-      ctx.fillStyle = '#334155';
-      const avenues = [-50, 0, 50];
-      const streets = [-50, 0, 50];
+      // 1. Draw Connected Road Network (Curved splines & straight avenues)
+      if (data.roadSegments && data.roadSegments.length > 0) {
+        // Draw road surface ribbons
+        for (const segment of data.roadSegments) {
+          if (segment.length < 2) continue;
 
-      // N-S Avenues
-      for (const ax of avenues) {
-        const screenX = (ax - px) * scale;
-        ctx.fillRect(screenX - 6 * scale, -size, 12 * scale, size * 2);
-      }
+          // Road base / asphalt
+          ctx.beginPath();
+          ctx.lineCap = 'round';
+          ctx.lineJoin = 'round';
+          const [firstX, firstZ] = segment[0];
+          ctx.moveTo((firstX - px) * scale, (firstZ - pz) * scale);
 
-      // E-W Streets
-      for (const sz of streets) {
-        const screenZ = (sz - pz) * scale;
-        ctx.fillRect(-size, screenZ - 6 * scale, size * 2, 12 * scale);
+          for (let i = 1; i < segment.length; i++) {
+            const [sx, sz] = segment[i];
+            ctx.lineTo((sx - px) * scale, (sz - pz) * scale);
+          }
+
+          ctx.strokeStyle = '#334155';
+          ctx.lineWidth = 10 * scale;
+          ctx.stroke();
+
+          // Road centerline dashes
+          ctx.beginPath();
+          ctx.setLineDash([2, 3]);
+          ctx.moveTo((firstX - px) * scale, (firstZ - pz) * scale);
+          for (let i = 1; i < segment.length; i++) {
+            const [sx, sz] = segment[i];
+            ctx.lineTo((sx - px) * scale, (sz - pz) * scale);
+          }
+          ctx.strokeStyle = 'rgba(255, 255, 255, 0.22)';
+          ctx.lineWidth = 1.2;
+          ctx.stroke();
+          ctx.setLineDash([]);
+        }
+      } else {
+        // Fallback grid
+        ctx.fillStyle = '#334155';
+        for (const ax of [-50, 0, 50]) {
+          const screenX = (ax - px) * scale;
+          ctx.fillRect(screenX - 5 * scale, -size, 10 * scale, size * 2);
+        }
+        for (const sz of [-50, 0, 50]) {
+          const screenZ = (sz - pz) * scale;
+          ctx.fillRect(-size, screenZ - 5 * scale, size * 2, 10 * scale);
+        }
       }
 
       // 2. Draw Traffic Lights
@@ -76,22 +101,45 @@ export const Minimap: React.FC<MinimapProps> = ({ getMinimapData, isPickupComple
         ctx.fill();
       }
 
-      // 3. Draw Route Line from Player to Destination
+      // 3. Draw Legal Route Along Road Network (A* Waypoints)
+      if (data.routeWaypoints && data.routeWaypoints.length > 1) {
+        ctx.beginPath();
+        ctx.setLineDash([4, 3]);
+        const [w0X, w0Z] = data.routeWaypoints[0];
+        ctx.moveTo((w0X - px) * scale, (w0Z - pz) * scale);
+
+        for (let i = 1; i < data.routeWaypoints.length; i++) {
+          const [wx, wz] = data.routeWaypoints[i];
+          ctx.lineTo((wx - px) * scale, (wz - pz) * scale);
+        }
+
+        ctx.strokeStyle = !isPickupComplete ? '#10b981' : '#f59e0b';
+        ctx.lineWidth = 2.5;
+        ctx.stroke();
+        ctx.setLineDash([]);
+      } else {
+        // Fallback straight line
+        const targetPos = !isPickupComplete ? data.pickupPos : data.dropoffPos;
+        if (targetPos) {
+          const tx = (targetPos[0] - px) * scale;
+          const tz = (targetPos[1] - pz) * scale;
+          ctx.beginPath();
+          ctx.setLineDash([4, 4]);
+          ctx.moveTo(0, 0);
+          ctx.lineTo(tx, tz);
+          ctx.strokeStyle = !isPickupComplete ? 'rgba(16, 185, 129, 0.7)' : 'rgba(245, 158, 11, 0.7)';
+          ctx.lineWidth = 2;
+          ctx.stroke();
+          ctx.setLineDash([]);
+        }
+      }
+
+      // Pulsing Target Beacon (Pickup or Current Dropoff)
       const targetPos = !isPickupComplete ? data.pickupPos : data.dropoffPos;
       if (targetPos) {
         const tx = (targetPos[0] - px) * scale;
         const tz = (targetPos[1] - pz) * scale;
 
-        ctx.beginPath();
-        ctx.setLineDash([4, 4]);
-        ctx.moveTo(0, 0);
-        ctx.lineTo(tx, tz);
-        ctx.strokeStyle = !isPickupComplete ? 'rgba(16, 185, 129, 0.6)' : 'rgba(245, 158, 11, 0.6)';
-        ctx.lineWidth = 2;
-        ctx.stroke();
-        ctx.setLineDash([]);
-
-        // Pulsing Target Beacon
         const pulse = Math.sin(Date.now() * 0.007) * 3;
         ctx.beginPath();
         ctx.arc(tx, tz, 7 + pulse, 0, Math.PI * 2);
@@ -110,7 +158,7 @@ export const Minimap: React.FC<MinimapProps> = ({ getMinimapData, isPickupComple
         const cx = (car.pos[0] - px) * scale;
         const cz = (car.pos[1] - pz) * scale;
 
-        ctx.fillStyle = car.isAmbulance ? (Date.now() % 400 < 200 ? '#ef4444' : '#38bdf8') : '#64748b';
+        ctx.fillStyle = car.isAmbulance ? (Date.now() % 400 < 200 ? '#ef4444' : '#38bdf8') : '#94a3b8';
         ctx.fillRect(cx - 3, cz - 3, 6, 6);
       }
 
@@ -135,7 +183,7 @@ export const Minimap: React.FC<MinimapProps> = ({ getMinimapData, isPickupComple
       ctx.restore();
 
       // Cardinal N marker
-      ctx.fillStyle = 'rgba(255, 255, 255, 0.7)';
+      ctx.fillStyle = 'rgba(255, 255, 255, 0.8)';
       ctx.font = '10px "JetBrains Mono", monospace';
       ctx.fillText('N', size / 2 - 3, 14);
 

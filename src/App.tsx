@@ -427,6 +427,8 @@ export const App: React.FC = () => {
                 dropoffPos: null,
                 trafficLights: [],
                 aiCars: [],
+                roadSegments: [],
+                routeWaypoints: [],
               }
             }
             isPickupComplete={activeMissionState?.isPickupComplete || false}

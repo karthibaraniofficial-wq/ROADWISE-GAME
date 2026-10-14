@@ -6,6 +6,7 @@ import {
   ActiveMissionState,
   CameraViewMode,
   ViolationEvent,
+  MinimapData,
 } from '../types/game';
 import { VEHICLE_ROSTER, COLOR_PALETTE } from '../services/storage';
 import { soundEngine } from '../services/audio';
@@ -48,6 +49,11 @@ export class GameEngine {
   private lastTime: number = 0;
 
   private callbacks: GameEngineCallbacks;
+
+  // Minimap road network & A* route caching
+  private cachedRoadSegments: [number, number][][] = [];
+  private cachedRouteWaypoints: [number, number][] = [];
+  private lastRouteCalcTime: number = 0;
 
   // Natural lighting
   private sunLight: THREE.DirectionalLight | null = null;
@@ -107,8 +113,15 @@ export class GameEngine {
     this.scene.add(this.city.scene);
     this.city.setWeather(this.activeMission.weather);
 
+    // Cache road network polylines for minimap display
+    this.cachedRoadSegments = [];
+    for (const edge of this.city.roadNetwork.edges.values()) {
+      const pts = edge.curve.getPoints(10);
+      this.cachedRoadSegments.push(pts.map((p) => [p.x, p.z]));
+    }
+
     // 5. Traffic AI
-    this.trafficAI = new TrafficAIManager();
+    this.trafficAI = new TrafficAIManager(this.city.roadNetwork);
     this.scene.add(this.trafficAI.group);
 
     // 6. Player Vehicle & Physics
@@ -356,6 +369,9 @@ export class GameEngine {
       // 5. Update Camera Follow
       this.updateCamera(delta);
 
+      // Route guidance update (A* shortest legal path)
+      this.updateRouteWaypoints();
+
       // 6. Traffic Rule Engine Telemetry Check
       this.evaluateRules(now);
 
@@ -501,14 +517,25 @@ export class GameEngine {
     }
   }
 
-  public getMinimapData(): {
-    playerPos: [number, number];
-    playerHeading: number;
-    pickupPos: [number, number];
-    dropoffPos: [number, number] | null;
-    trafficLights: { pos: [number, number]; state: string }[];
-    aiCars: { pos: [number, number]; isAmbulance: boolean }[];
-  } {
+  private updateRouteWaypoints(): void {
+    if (!this.city || !this.physics) return;
+    const now = performance.now();
+    if (now - this.lastRouteCalcTime < 400 && this.cachedRouteWaypoints.length > 0) return;
+    this.lastRouteCalcTime = now;
+
+    const playerPos: [number, number] = [this.physics.position.x, this.physics.position.z];
+    const currentDropoff = this.activeMission.dropoffLocations[this.missionState.currentDropoffIndex];
+    const targetPos: [number, number] = !this.missionState.isPickupComplete
+      ? [this.activeMission.pickupPos[0], this.activeMission.pickupPos[2]]
+      : currentDropoff
+        ? [currentDropoff[0], currentDropoff[2]]
+        : playerPos;
+
+    const path3D = this.city.findPath(playerPos, targetPos);
+    this.cachedRouteWaypoints = path3D.map((p) => [p.x, p.z]);
+  }
+
+  public getMinimapData(): MinimapData {
     const playerPos: [number, number] = this.physics
       ? [this.physics.position.x, this.physics.position.z]
       : [0, 0];
@@ -527,6 +554,8 @@ export class GameEngine {
       aiCars: this.trafficAI
         ? this.trafficAI.cars.map((c) => ({ pos: [c.position.x, c.position.z], isAmbulance: c.isAmbulance }))
         : [],
+      roadSegments: this.cachedRoadSegments,
+      routeWaypoints: this.cachedRouteWaypoints,
     };
   }
 

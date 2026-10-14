@@ -300,3 +300,80 @@ test('12. Firebase Configuration Helper Validation', async () => {
   assert.equal(typeof isFirebaseConfigured(), 'boolean');
 });
 
+test('13. Connected Road Network: Nodes, Edges & Districts', async () => {
+  const { RoadNetwork } = await import('../src/engine/world/RoadNetwork.ts');
+  const network = new RoadNetwork();
+
+  assert.ok(network.nodes.size >= 20, `Network must have at least 20 nodes, got ${network.nodes.size}`);
+  assert.ok(network.edges.size >= 20, `Network must have at least 20 edges, got ${network.edges.size}`);
+
+  // Check critical nodes exist
+  assert.ok(network.nodes.has('N_CENTER'), 'Center intersection node N_CENTER must exist');
+  assert.ok(network.nodes.has('R_NORTH'), 'Roundabout node R_NORTH must exist');
+  assert.ok(network.nodes.has('HOSP_MAIN'), 'Hospital district node HOSP_MAIN must exist');
+  assert.ok(network.nodes.has('SCH_GATE'), 'School zone node SCH_GATE must exist');
+  assert.ok(network.nodes.has('HERIT_TEMPLE'), 'Heritage quarter node HERIT_TEMPLE must exist');
+
+  // Verify all edges have positive length and CatmullRom splines
+  for (const [id, edge] of network.edges) {
+    assert.ok(edge.length > 0, `Edge ${id} must have positive length`);
+    assert.ok(edge.curve, `Edge ${id} must have valid CatmullRom spline`);
+    assert.ok(edge.width >= 6, `Edge ${id} width must be at least 6m`);
+  }
+
+  // Verify speed limits per district
+  const schoolEdge = network.edges.get('E_NORTH_TO_SCH_GATE');
+  assert.ok(schoolEdge, 'School edge must exist');
+  assert.equal(schoolEdge.speedLimitKmh, 30, 'School zone must have 30 km/h speed limit');
+
+  const flyoverEdge = network.edges.get('E_FLYOVER');
+  assert.ok(flyoverEdge, 'Flyover edge must exist');
+  assert.ok(flyoverEdge.isElevated, 'Flyover segment must be elevated');
+  assert.equal(flyoverEdge.elevationHeight, 4.5, 'Flyover elevation must be 4.5m');
+});
+
+test('14. Navigation Graph: A* Pathfinding Between Districts & One-Way Respect', async () => {
+  const { RoadNetwork } = await import('../src/engine/world/RoadNetwork.ts');
+  const network = new RoadNetwork();
+
+  // Route 1: From Center (0, 0) to IT Park Roundabout (60, 60)
+  const path1 = network.findPath([0, 0], [60, 60]);
+  assert.ok(path1.length >= 3, `A* path to IT Park must have multiple waypoints along road, got ${path1.length}`);
+
+  // Route 2: From School Zone (0, -75) to Hospital District (-70, 60)
+  const path2 = network.findPath([0, -75], [-70, 60]);
+  assert.ok(path2.length >= 4, `A* path from School to Hospital must navigate road graph, got ${path2.length}`);
+
+  // Verify nearest road point query
+  const nearest = network.findClosestRoadPoint(2, 5);
+  assert.ok(nearest.point, 'Closest road point must be found');
+  assert.ok(nearest.edge, 'Closest road edge must be found');
+});
+
+test('15. Mission Reachability: All 10 Delivery Missions Reachable Via Road Graph', async () => {
+  const { RoadNetwork } = await import('../src/engine/world/RoadNetwork.ts');
+  const network = new RoadNetwork();
+
+  for (const mission of MISSIONS) {
+    // Check pickup is reachable from start (0, 0)
+    const pickupPath = network.findPath([0, 0], [mission.pickupPos[0], mission.pickupPos[2]]);
+    assert.ok(
+      pickupPath.length >= 2,
+      `Mission ${mission.id} (${mission.title}) pickup at [${mission.pickupPos[0]}, ${mission.pickupPos[2]}] must be reachable`
+    );
+
+    // Check each dropoff is reachable from pickup
+    for (let d = 0; d < mission.dropoffLocations.length; d++) {
+      const dropoff = mission.dropoffLocations[d];
+      const dropoffPath = network.findPath(
+        [mission.pickupPos[0], mission.pickupPos[2]],
+        [dropoff[0], dropoff[2]]
+      );
+      assert.ok(
+        dropoffPath.length >= 2,
+        `Mission ${mission.id} dropoff #${d + 1} at [${dropoff[0]}, ${dropoff[2]}] must be reachable`
+      );
+    }
+  }
+});
+

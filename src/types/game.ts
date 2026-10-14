@@ -176,3 +176,14 @@ export interface AuthUser {
   emailVerified: boolean;
   avatarUrl?: string;
 }
+
+export interface MinimapData {
+  playerPos: [number, number];
+  playerHeading: number;
+  pickupPos: [number, number];
+  dropoffPos: [number, number] | null;
+  trafficLights: { pos: [number, number]; state: string }[];
+  aiCars: { pos: [number, number]; isAmbulance: boolean }[];
+  roadSegments: [number, number][][];
+  routeWaypoints: [number, number][];
+}

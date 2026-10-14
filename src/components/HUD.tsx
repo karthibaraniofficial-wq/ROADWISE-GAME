@@ -22,6 +22,7 @@ interface HUDProps {
   onPlayHorn: () => void;
   onInteract: () => void;
   onPause: () => void;
+  onToggleMap?: () => void;
 }
 
 export const HUD: React.FC<HUDProps> = ({
@@ -44,6 +45,7 @@ export const HUD: React.FC<HUDProps> = ({
   onPlayHorn,
   onInteract,
   onPause,
+  onToggleMap,
 }) => {
   const isSpeeding = speedKmh > speedLimitKmh + 2;
   const minutes = Math.floor(timeRemainingSeconds / 60);
@@ -412,6 +414,25 @@ export const HUD: React.FC<HUDProps> = ({
           >
             📢 Horn
           </button>
+
+          {onToggleMap && (
+            <button
+              onClick={onToggleMap}
+              title="Open tactical city map [M]"
+              style={{
+                background: 'rgba(30, 41, 59, 0.8)',
+                border: '1px solid rgba(56, 189, 248, 0.35)',
+                color: '#38bdf8',
+                padding: '8px 12px',
+                borderRadius: '10px',
+                cursor: 'pointer',
+                fontWeight: 700,
+                fontSize: '12px',
+              }}
+            >
+              🗺️ [M] Map
+            </button>
+          )}
         </div>
 
         {/* BOTTOM CENTER: Contextual Checkpoint Action Prompt [E] */}

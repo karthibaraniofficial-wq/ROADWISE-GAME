@@ -81,7 +81,33 @@ export class DistrictBuilder {
     });
 
     this.redCrossMat = new THREE.MeshBasicMaterial({ color: 0xef4444 });
+
+    this.industrialSteelMat = new THREE.MeshStandardMaterial({
+      color: 0x334155,
+      metalness: 0.75,
+      roughness: 0.35,
+    });
+
+    this.containerRedMat = new THREE.MeshStandardMaterial({
+      color: 0x991b1b,
+      roughness: 0.6,
+    });
+
+    this.containerBlueMat = new THREE.MeshStandardMaterial({
+      color: 0x1e40af,
+      roughness: 0.6,
+    });
+
+    this.containerYellowMat = new THREE.MeshStandardMaterial({
+      color: 0xca8a04,
+      roughness: 0.5,
+    });
   }
+
+  private industrialSteelMat: THREE.MeshStandardMaterial;
+  private containerRedMat: THREE.MeshStandardMaterial;
+  private containerBlueMat: THREE.MeshStandardMaterial;
+  private containerYellowMat: THREE.MeshStandardMaterial;
 
   public buildAllDistricts(): DistrictBundle {
     const group = new THREE.Group();
@@ -104,6 +130,9 @@ export class DistrictBuilder {
 
     // 6. Heritage & Temple District (North-West at [-60, -60] to [-90, -70])
     this.buildHeritageQuarter(group, obstacles);
+
+    // 7. Industrial Zone & Freight Logistics (South at [0, 90] to [-35, 115])
+    this.buildIndustrialZone(group, obstacles);
 
     return { group, obstacles };
   }
@@ -439,5 +468,91 @@ export class DistrictBuilder {
       maxZ: -50,
       name: 'Heritage Temple Complex',
     });
+  }
+
+  // ---------------------------------------------------------------------------
+  // 7. INDUSTRIAL ZONE & FREIGHT LOGISTICS (Southern Corridor)
+  // ---------------------------------------------------------------------------
+  private buildIndustrialZone(parent: THREE.Group, obstacles: ObstacleBox[]): void {
+    // 1. Warehouse Depot 1 (Corrugated Metal Logistics Shed) at [-25, 105]
+    const wh1Base = new THREE.Mesh(
+      new THREE.BoxGeometry(22, 7.5, 18),
+      this.industrialSteelMat
+    );
+    wh1Base.position.set(-25, 3.75, 108);
+    wh1Base.castShadow = true;
+    wh1Base.receiveShadow = true;
+    parent.add(wh1Base);
+
+    // Pitched metal roof
+    const roofGeo = new THREE.ConeGeometry(14, 3.0, 4);
+    roofGeo.rotateY(Math.PI / 4);
+    const roof1 = new THREE.Mesh(roofGeo, this.concreteMat);
+    roof1.position.set(-25, 9.0, 108);
+    roof1.scale.set(1.1, 1.0, 0.9);
+    parent.add(roof1);
+
+    obstacles.push({
+      minX: -36,
+      maxX: -14,
+      minZ: 99,
+      maxZ: 117,
+      name: 'Freight Warehouse Alpha',
+    });
+
+    // 2. Warehouse Depot 2 (East Terminal) at [28, 105]
+    const wh2Base = new THREE.Mesh(
+      new THREE.BoxGeometry(20, 7.0, 16),
+      this.industrialSteelMat
+    );
+    wh2Base.position.set(28, 3.5, 106);
+    wh2Base.castShadow = true;
+    wh2Base.receiveShadow = true;
+    parent.add(wh2Base);
+
+    obstacles.push({
+      minX: 18,
+      maxX: 38,
+      minZ: 98,
+      maxZ: 114,
+      name: 'Logistics Terminal Beta',
+    });
+
+    // 3. Stacks of Intermodal Shipping Containers (20ft & 40ft)
+    const containerPositions = [
+      { x: -10, y: 1.3, z: 104, rot: 0, mat: this.containerRedMat },
+      { x: -10, y: 3.9, z: 104, rot: 0, mat: this.containerBlueMat },
+      { x: -10, y: 1.3, z: 110, rot: 0, mat: this.containerYellowMat },
+      { x: 14, y: 1.3, z: 104, rot: 0.1, mat: this.containerBlueMat },
+      { x: 14, y: 3.9, z: 104, rot: 0.1, mat: this.containerRedMat },
+      { x: 14, y: 1.3, z: 111, rot: 0, mat: this.containerYellowMat },
+    ];
+
+    for (const c of containerPositions) {
+      const box = new THREE.Mesh(new THREE.BoxGeometry(6.0, 2.6, 2.4), c.mat);
+      box.position.set(c.x, c.y, c.z);
+      box.rotation.y = c.rot;
+      box.castShadow = true;
+      box.receiveShadow = true;
+      parent.add(box);
+    }
+
+    // 4. Heavy Cargo Gantry Crane (Spanning overhead at [0, 106])
+    const craneLegL = new THREE.Mesh(new THREE.BoxGeometry(0.8, 11, 0.8), this.containerYellowMat);
+    craneLegL.position.set(-8, 5.5, 106);
+    parent.add(craneLegL);
+
+    const craneLegR = new THREE.Mesh(new THREE.BoxGeometry(0.8, 11, 0.8), this.containerYellowMat);
+    craneLegR.position.set(8, 5.5, 106);
+    parent.add(craneLegR);
+
+    const crossBeam = new THREE.Mesh(new THREE.BoxGeometry(17.5, 1.2, 1.2), this.containerYellowMat);
+    crossBeam.position.set(0, 11, 106);
+    parent.add(crossBeam);
+
+    // Crane trolley & hoist
+    const hoist = new THREE.Mesh(new THREE.BoxGeometry(1.8, 1.4, 1.6), this.industrialSteelMat);
+    hoist.position.set(1.5, 9.8, 106);
+    parent.add(hoist);
   }
 }

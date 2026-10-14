@@ -313,6 +313,8 @@ test('13. Connected Road Network: Nodes, Edges & Districts', async () => {
   assert.ok(network.nodes.has('HOSP_MAIN'), 'Hospital district node HOSP_MAIN must exist');
   assert.ok(network.nodes.has('SCH_GATE'), 'School zone node SCH_GATE must exist');
   assert.ok(network.nodes.has('HERIT_TEMPLE'), 'Heritage quarter node HERIT_TEMPLE must exist');
+  assert.ok(network.nodes.has('IND_JUNCTION'), 'Industrial zone node IND_JUNCTION must exist');
+  assert.ok(network.nodes.has('IND_DEPOT'), 'Industrial zone node IND_DEPOT must exist');
 
   // Verify all edges have positive length and CatmullRom splines
   for (const [id, edge] of network.edges) {
@@ -330,6 +332,10 @@ test('13. Connected Road Network: Nodes, Edges & Districts', async () => {
   assert.ok(flyoverEdge, 'Flyover edge must exist');
   assert.ok(flyoverEdge.isElevated, 'Flyover segment must be elevated');
   assert.equal(flyoverEdge.elevationHeight, 4.5, 'Flyover elevation must be 4.5m');
+
+  const indEdge = network.edges.get('E_RES_TO_IND');
+  assert.ok(indEdge, 'Industrial corridor edge E_RES_TO_IND must exist');
+  assert.equal(indEdge.district, 'INDUSTRIAL_ZONE');
 });
 
 test('14. Navigation Graph: A* Pathfinding Between Districts & One-Way Respect', async () => {
@@ -343,6 +349,10 @@ test('14. Navigation Graph: A* Pathfinding Between Districts & One-Way Respect',
   // Route 2: From School Zone (0, -75) to Hospital District (-70, 60)
   const path2 = network.findPath([0, -75], [-70, 60]);
   assert.ok(path2.length >= 4, `A* path from School to Hospital must navigate road graph, got ${path2.length}`);
+
+  // Route 3: From Center (0, 0) to Industrial Freight Depot (-35, 90)
+  const path3 = network.findPath([0, 0], [-35, 90]);
+  assert.ok(path3.length >= 3, `A* path to Industrial Depot must navigate road graph, got ${path3.length}`);
 
   // Verify nearest road point query
   const nearest = network.findClosestRoadPoint(2, 5);
@@ -375,5 +385,15 @@ test('15. Mission Reachability: All 10 Delivery Missions Reachable Via Road Grap
       );
     }
   }
+});
+
+test('16. Tactical Navigation Map: Telemetry & Landmark Routing Integrity', async () => {
+  const { RoadNetwork } = await import('../src/engine/world/RoadNetwork.ts');
+  const network = new RoadNetwork();
+
+  // Verify speed limit queries across 8 distinct districts
+  assert.equal(network.getSpeedLimitAt(0, -75), 30, 'School zone must query 30 km/h');
+  assert.ok(network.getSpeedLimitAt(80, -120) >= 50, 'Highway must query at least 50 km/h');
+  assert.ok(network.getSpeedLimitAt(-85, -60) <= 30, 'Heritage alley must query 25 km/h');
 });
 

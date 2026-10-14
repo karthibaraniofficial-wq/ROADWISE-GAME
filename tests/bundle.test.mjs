@@ -20066,6 +20066,9 @@ var init_RoadNetwork = __esm({
         this.addNode("FLY_START", 40, -30, "CURVE_NODE", "IT_PARK");
         this.addNode("FLY_MID", 0, -30, "CURVE_NODE", "COMMERCIAL_MARKET");
         this.addNode("FLY_END", -40, -30, "CURVE_NODE", "HERITAGE_QUARTER");
+        this.addNode("IND_JUNCTION", 0, 90, "T_JUNCTION", "INDUSTRIAL_ZONE", true);
+        this.addNode("IND_DEPOT", -35, 90, "DEAD_END", "INDUSTRIAL_ZONE");
+        this.addNode("IND_LOGISTICS", 35, 90, "T_JUNCTION", "INDUSTRIAL_ZONE");
         this.addEdge(
           "E_MG_WEST",
           "N_WEST",
@@ -20464,6 +20467,66 @@ var init_RoadNetwork = __esm({
           false,
           true,
           4.5
+        );
+        this.addEdge(
+          "E_RES_TO_IND",
+          "N_SOUTH",
+          "IND_JUNCTION",
+          [
+            new Vector3(0, 0, 60),
+            new Vector3(0, 0, 75),
+            new Vector3(0, 0, 90)
+          ],
+          14,
+          4,
+          40,
+          "ARTERIAL",
+          "INDUSTRIAL_ZONE"
+        );
+        this.addEdge(
+          "E_IND_DEPOT_SPUR",
+          "IND_JUNCTION",
+          "IND_DEPOT",
+          [
+            new Vector3(0, 0, 90),
+            new Vector3(-18, 0, 90),
+            new Vector3(-35, 0, 90)
+          ],
+          12,
+          2,
+          35,
+          "COMMERCIAL",
+          "INDUSTRIAL_ZONE"
+        );
+        this.addEdge(
+          "E_IND_LOGISTICS_FEEDER",
+          "IND_JUNCTION",
+          "IND_LOGISTICS",
+          [
+            new Vector3(0, 0, 90),
+            new Vector3(18, 0, 90),
+            new Vector3(35, 0, 90)
+          ],
+          12,
+          2,
+          40,
+          "COMMERCIAL",
+          "INDUSTRIAL_ZONE"
+        );
+        this.addEdge(
+          "E_IND_TO_HWY_S",
+          "IND_LOGISTICS",
+          "HWY_S",
+          [
+            new Vector3(35, 0, 90),
+            new Vector3(48, 0, 105),
+            new Vector3(60, 0, 120)
+          ],
+          14,
+          2,
+          45,
+          "ARTERIAL",
+          "INDUSTRIAL_ZONE"
         );
       }
       /**
@@ -21307,6 +21370,8 @@ test("13. Connected Road Network: Nodes, Edges & Districts", async () => {
   assert.ok(network.nodes.has("HOSP_MAIN"), "Hospital district node HOSP_MAIN must exist");
   assert.ok(network.nodes.has("SCH_GATE"), "School zone node SCH_GATE must exist");
   assert.ok(network.nodes.has("HERIT_TEMPLE"), "Heritage quarter node HERIT_TEMPLE must exist");
+  assert.ok(network.nodes.has("IND_JUNCTION"), "Industrial zone node IND_JUNCTION must exist");
+  assert.ok(network.nodes.has("IND_DEPOT"), "Industrial zone node IND_DEPOT must exist");
   for (const [id, edge] of network.edges) {
     assert.ok(edge.length > 0, `Edge ${id} must have positive length`);
     assert.ok(edge.curve, `Edge ${id} must have valid CatmullRom spline`);
@@ -21319,6 +21384,9 @@ test("13. Connected Road Network: Nodes, Edges & Districts", async () => {
   assert.ok(flyoverEdge, "Flyover edge must exist");
   assert.ok(flyoverEdge.isElevated, "Flyover segment must be elevated");
   assert.equal(flyoverEdge.elevationHeight, 4.5, "Flyover elevation must be 4.5m");
+  const indEdge = network.edges.get("E_RES_TO_IND");
+  assert.ok(indEdge, "Industrial corridor edge E_RES_TO_IND must exist");
+  assert.equal(indEdge.district, "INDUSTRIAL_ZONE");
 });
 test("14. Navigation Graph: A* Pathfinding Between Districts & One-Way Respect", async () => {
   const { RoadNetwork: RoadNetwork2 } = await Promise.resolve().then(() => (init_RoadNetwork(), RoadNetwork_exports));
@@ -21327,6 +21395,8 @@ test("14. Navigation Graph: A* Pathfinding Between Districts & One-Way Respect",
   assert.ok(path1.length >= 3, `A* path to IT Park must have multiple waypoints along road, got ${path1.length}`);
   const path2 = network.findPath([0, -75], [-70, 60]);
   assert.ok(path2.length >= 4, `A* path from School to Hospital must navigate road graph, got ${path2.length}`);
+  const path3 = network.findPath([0, 0], [-35, 90]);
+  assert.ok(path3.length >= 3, `A* path to Industrial Depot must navigate road graph, got ${path3.length}`);
   const nearest = network.findClosestRoadPoint(2, 5);
   assert.ok(nearest.point, "Closest road point must be found");
   assert.ok(nearest.edge, "Closest road edge must be found");
@@ -21352,6 +21422,13 @@ test("15. Mission Reachability: All 10 Delivery Missions Reachable Via Road Grap
       );
     }
   }
+});
+test("16. Tactical Navigation Map: Telemetry & Landmark Routing Integrity", async () => {
+  const { RoadNetwork: RoadNetwork2 } = await Promise.resolve().then(() => (init_RoadNetwork(), RoadNetwork_exports));
+  const network = new RoadNetwork2();
+  assert.equal(network.getSpeedLimitAt(0, -75), 30, "School zone must query 30 km/h");
+  assert.ok(network.getSpeedLimitAt(80, -120) >= 50, "Highway must query at least 50 km/h");
+  assert.ok(network.getSpeedLimitAt(-85, -60) <= 30, "Heritage alley must query 25 km/h");
 });
 /*! Bundled license information:
 

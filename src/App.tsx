@@ -55,6 +55,7 @@ export const App: React.FC = () => {
   const [showSettings, setShowSettings] = useState(false);
   const [isPaused, setIsPaused] = useState(false);
   const [isAudioMuted, setIsAudioMuted] = useState(false);
+  const [isMapOpen, setIsMapOpen] = useState(false);
 
   // In-Game HUD & Telemetry state
   const [speedKmh, setSpeedKmh] = useState(0);
@@ -241,6 +242,10 @@ export const App: React.FC = () => {
           });
         }
 
+        if (code === 'KeyM') {
+          setIsMapOpen((prev) => !prev);
+        }
+
         gameEngineRef.current?.setInputs(inputsRef.current);
       }
 
@@ -412,6 +417,7 @@ export const App: React.FC = () => {
             }}
             onPlayHorn={() => soundEngine.playHorn()}
             onInteract={() => gameEngineRef.current?.interact()}
+            onToggleMap={() => setIsMapOpen((prev) => !prev)}
             onPause={() => {
               setIsPaused(true);
               gameEngineRef.current?.pause();
@@ -432,6 +438,8 @@ export const App: React.FC = () => {
               }
             }
             isPickupComplete={activeMissionState?.isPickupComplete || false}
+            isMapOpen={isMapOpen}
+            onToggleMap={() => setIsMapOpen((prev) => !prev)}
           />
 
           <TouchControls

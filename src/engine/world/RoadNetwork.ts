@@ -8,7 +8,8 @@ export type DistrictType =
   | 'SCHOOL_ZONE'
   | 'HOSPITAL_DISTRICT'
   | 'RING_ROAD_HIGHWAY'
-  | 'HERITAGE_QUARTER';
+  | 'HERITAGE_QUARTER'
+  | 'INDUSTRIAL_ZONE';
 
 export type RoadType =
   | 'HIGHWAY'
@@ -169,6 +170,11 @@ export class RoadNetwork {
     this.addNode('FLY_START', 40, -30, 'CURVE_NODE', 'IT_PARK');
     this.addNode('FLY_MID', 0, -30, 'CURVE_NODE', 'COMMERCIAL_MARKET');
     this.addNode('FLY_END', -40, -30, 'CURVE_NODE', 'HERITAGE_QUARTER');
+
+    // Industrial Zone Nodes (Southern Logistics Corridor)
+    this.addNode('IND_JUNCTION', 0, 90, 'T_JUNCTION', 'INDUSTRIAL_ZONE', true);
+    this.addNode('IND_DEPOT', -35, 90, 'DEAD_END', 'INDUSTRIAL_ZONE');
+    this.addNode('IND_LOGISTICS', 35, 90, 'T_JUNCTION', 'INDUSTRIAL_ZONE');
 
     // -------------------------------------------------------------
     // 2. CONNECTING ARTERIAL & SECONDARY ROAD EDGES
@@ -619,6 +625,73 @@ export class RoadNetwork {
       false,
       true,
       4.5
+    );
+
+    // -------------------------------------------------------------
+    // 9. INDUSTRIAL FREIGHT & SERVICE ROADS (South Logistics Corridor)
+    // -------------------------------------------------------------
+    this.addEdge(
+      'E_RES_TO_IND',
+      'N_SOUTH',
+      'IND_JUNCTION',
+      [
+        new THREE.Vector3(0, 0, 60),
+        new THREE.Vector3(0, 0, 75),
+        new THREE.Vector3(0, 0, 90),
+      ],
+      14,
+      4,
+      40,
+      'ARTERIAL',
+      'INDUSTRIAL_ZONE'
+    );
+
+    this.addEdge(
+      'E_IND_DEPOT_SPUR',
+      'IND_JUNCTION',
+      'IND_DEPOT',
+      [
+        new THREE.Vector3(0, 0, 90),
+        new THREE.Vector3(-18, 0, 90),
+        new THREE.Vector3(-35, 0, 90),
+      ],
+      12,
+      2,
+      35,
+      'COMMERCIAL',
+      'INDUSTRIAL_ZONE'
+    );
+
+    this.addEdge(
+      'E_IND_LOGISTICS_FEEDER',
+      'IND_JUNCTION',
+      'IND_LOGISTICS',
+      [
+        new THREE.Vector3(0, 0, 90),
+        new THREE.Vector3(18, 0, 90),
+        new THREE.Vector3(35, 0, 90),
+      ],
+      12,
+      2,
+      40,
+      'COMMERCIAL',
+      'INDUSTRIAL_ZONE'
+    );
+
+    this.addEdge(
+      'E_IND_TO_HWY_S',
+      'IND_LOGISTICS',
+      'HWY_S',
+      [
+        new THREE.Vector3(35, 0, 90),
+        new THREE.Vector3(48, 0, 105),
+        new THREE.Vector3(60, 0, 120),
+      ],
+      14,
+      2,
+      45,
+      'ARTERIAL',
+      'INDUSTRIAL_ZONE'
     );
   }
 

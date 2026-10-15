@@ -11,6 +11,8 @@ import {
   browserLocalPersistence,
   GoogleAuthProvider,
   signInWithPopup,
+  signInWithRedirect,
+  getRedirectResult,
   RecaptchaVerifier,
   signInWithPhoneNumber,
   ConfirmationResult,
@@ -19,11 +21,22 @@ import {
 import { auth, isFirebaseConfigured } from '../lib/firebase';
 import { AuthUser } from '../types/game';
 
-// Configure persistence if auth instance is available
+// Configure persistence & handle incoming redirect results if auth instance is available
 if (auth) {
   setPersistence(auth, browserLocalPersistence).catch((err) => {
     console.warn('[ROADWISE AUTH] Persistence initialization note:', err.message);
   });
+
+  // Automatically resolve credentials from redirect flows (e.g. mobile or popup-blocked browsers)
+  getRedirectResult(auth)
+    .then((result) => {
+      if (result && result.user) {
+        console.info('[ROADWISE AUTH] Successfully resolved Google redirect session for:', result.user.email);
+      }
+    })
+    .catch((err) => {
+      console.warn('[ROADWISE AUTH] Note on redirect result:', err.message);
+    });
 }
 
 const LOCAL_STORAGE_GUEST_KEY = 'ROADWISE_GUEST_USER_V1';
@@ -52,7 +65,9 @@ export function formatAuthError(errorCode: string): string {
     case 'auth/popup-closed-by-user':
       return 'Google sign-in popup was closed before completing.';
     case 'auth/popup-blocked':
-      return 'Google sign-in popup was blocked by browser. Please enable popups.';
+      return 'Google sign-in popup was blocked by browser. Click "Sign In with Full-Page Redirect" below or allow popups.';
+    case 'auth/unauthorized-domain':
+      return 'Domain roadwise-game.vercel.app is not yet in Firebase Authorized Domains. Please add it in Firebase Console, or play as Guest / Email.';
     case 'auth/invalid-phone-number':
       return 'Invalid phone number. Please include your country code (e.g. +91 9876543210).';
     case 'auth/invalid-verification-code':
@@ -214,9 +229,9 @@ export function subscribeToAuthState(callback: (user: AuthUser | null) => void):
 }
 
 /**
- * Sign in using Google OAuth Popup.
+ * Sign in using Google OAuth with automatic redirect fallback if popup is blocked.
  */
-export async function loginWithGoogle(): Promise<AuthUser> {
+export async function loginWithGoogle(forceRedirect = false): Promise<AuthUser | null> {
   if (!isFirebaseConfigured() || !auth) {
     const guestUser: AuthUser = {
       uid: 'google_offline_' + Date.now(),
@@ -230,10 +245,40 @@ export async function loginWithGoogle(): Promise<AuthUser> {
 
   const provider = new GoogleAuthProvider();
   provider.setCustomParameters({ prompt: 'select_account' });
-  const credential = await signInWithPopup(auth, provider);
-  const mapped = mapFirebaseUser(credential.user);
-  if (!mapped) throw new Error('Google sign-in failed to establish user session.');
-  return mapped;
+
+  if (forceRedirect) {
+    await signInWithRedirect(auth, provider);
+    return null;
+  }
+
+  try {
+    const credential = await signInWithPopup(auth, provider);
+    const mapped = mapFirebaseUser(credential.user);
+    if (!mapped) throw new Error('Google sign-in failed to establish user session.');
+    return mapped;
+  } catch (err: any) {
+    // If browser popup blocker intercepts the window, automatically trigger redirect flow
+    if (err.code === 'auth/popup-blocked') {
+      console.warn('[ROADWISE AUTH] Google popup blocked by browser. Initiating full-page redirect flow...');
+      await signInWithRedirect(auth, provider);
+      return null;
+    }
+    throw err;
+  }
+}
+
+/**
+ * Instant Guest / Offline Rider mode without third-party popups or barriers.
+ */
+export function loginAsGuest(customName?: string): AuthUser {
+  const guestUser: AuthUser = {
+    uid: 'guest_' + Math.random().toString(36).substring(2, 9),
+    email: 'guest@roadwise.local',
+    displayName: customName || 'Guest Rider',
+    emailVerified: false,
+  };
+  localStorage.setItem(LOCAL_STORAGE_GUEST_KEY, JSON.stringify(guestUser));
+  return guestUser;
 }
 
 let activeRecaptchaVerifier: RecaptchaVerifier | null = null;

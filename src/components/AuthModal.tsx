@@ -18,6 +18,8 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, onSuccess
     login,
     register,
     loginGoogle,
+    loginGoogleRedirect,
+    loginGuest,
     sendOtp,
     verifyOtp,
     resetPassword,
@@ -99,6 +101,22 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, onSuccess
     } catch {
       // Error is set in useAuth
     }
+  };
+
+  const handleGoogleRedirectSignIn = async () => {
+    setLocalValidation(null);
+    clearError();
+    try {
+      await loginGoogleRedirect();
+    } catch {
+      // Error is set in useAuth
+    }
+  };
+
+  const handleGuestSignIn = () => {
+    loginGuest('Rider_' + Math.floor(1000 + Math.random() * 9000));
+    onSuccess();
+    onClose();
   };
 
   const handleSendPhoneOtp = async (e: React.FormEvent) => {
@@ -338,12 +356,40 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, onSuccess
               fontSize: '13px',
               marginBottom: '16px',
               display: 'flex',
-              alignItems: 'center',
+              flexDirection: 'column',
               gap: '8px',
             }}
           >
-            <span>⚠️</span>
-            <span>{localValidation || error}</span>
+            <div style={{ display: 'flex', alignItems: 'flex-start', gap: '8px' }}>
+              <span style={{ fontSize: '15px' }}>⚠️</span>
+              <span style={{ flex: 1, lineHeight: 1.4 }}>{localValidation || error}</span>
+            </div>
+            {error && (error.toLowerCase().includes('popup') || error.toLowerCase().includes('blocked') || error.toLowerCase().includes('redirect')) && (
+              <button
+                type="button"
+                onClick={handleGoogleRedirectSignIn}
+                disabled={loading}
+                style={{
+                  marginTop: '4px',
+                  background: 'linear-gradient(135deg, #0284c7, #0369a1)',
+                  color: '#ffffff',
+                  border: 'none',
+                  borderRadius: '8px',
+                  padding: '9px 12px',
+                  fontSize: '12px',
+                  fontWeight: 700,
+                  cursor: loading ? 'not-allowed' : 'pointer',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  gap: '6px',
+                  boxShadow: '0 2px 8px rgba(2, 132, 199, 0.3)',
+                }}
+              >
+                <span>🔄</span>
+                <span>Sign In with Full-Page Redirect</span>
+              </button>
+            )}
           </div>
         )}
 
@@ -746,6 +792,53 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, onSuccess
             )}
           </form>
         )}
+
+        {/* Instant Guest / Offline Play Bypass */}
+        <div
+          style={{
+            marginTop: '20px',
+            paddingTop: '16px',
+            borderTop: '1px solid rgba(255, 255, 255, 0.08)',
+            textAlign: 'center',
+          }}
+        >
+          <button
+            type="button"
+            onClick={handleGuestSignIn}
+            style={{
+              width: '100%',
+              background: 'rgba(255, 255, 255, 0.04)',
+              border: '1px dashed rgba(255, 255, 255, 0.22)',
+              borderRadius: '12px',
+              padding: '11px 16px',
+              color: '#e2e8f0',
+              fontSize: '13px',
+              fontWeight: 700,
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              gap: '8px',
+              cursor: 'pointer',
+              transition: 'all 0.2s',
+            }}
+            onMouseEnter={(e) => {
+              e.currentTarget.style.color = '#38bdf8';
+              e.currentTarget.style.borderColor = 'rgba(56, 189, 248, 0.5)';
+              e.currentTarget.style.background = 'rgba(56, 189, 248, 0.08)';
+            }}
+            onMouseLeave={(e) => {
+              e.currentTarget.style.color = '#e2e8f0';
+              e.currentTarget.style.borderColor = 'rgba(255, 255, 255, 0.22)';
+              e.currentTarget.style.background = 'rgba(255, 255, 255, 0.04)';
+            }}
+          >
+            <span>🎮</span>
+            <span>Play as Guest / Offline Rider</span>
+          </button>
+          <div style={{ marginTop: '8px', fontSize: '11px', color: '#64748b' }}>
+            Instant access — no Google login or popup permissions required
+          </div>
+        </div>
       </div>
     </div>
   );

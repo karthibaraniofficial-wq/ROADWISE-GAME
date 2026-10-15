@@ -10,6 +10,7 @@ import {
   resendVerificationEmail,
   formatAuthError,
   loginWithGoogle,
+  loginAsGuest,
   sendPhoneOtp,
   verifyPhoneOtp,
 } from '../services/authService';
@@ -23,6 +24,8 @@ export interface UseAuthReturn {
   login: (email: string, pass: string) => Promise<void>;
   register: (email: string, pass: string, name: string) => Promise<void>;
   loginGoogle: () => Promise<void>;
+  loginGoogleRedirect: () => Promise<void>;
+  loginGuest: (name?: string) => void;
   sendOtp: (phone: string, containerId?: string) => Promise<void>;
   verifyOtp: (otp: string, fallbackPhone?: string) => Promise<void>;
   logout: () => Promise<void>;
@@ -81,7 +84,9 @@ export function useAuth(): UseAuthReturn {
     setError(null);
     try {
       const loggedIn = await loginWithGoogle();
-      setUser(loggedIn);
+      if (loggedIn) {
+        setUser(loggedIn);
+      }
     } catch (err: any) {
       const msg = err.code ? formatAuthError(err.code) : err.message || 'Google sign-in failed';
       setError(msg);
@@ -153,6 +158,26 @@ export function useAuth(): UseAuthReturn {
     }
   }, []);
 
+  const loginGoogleRedirect = useCallback(async () => {
+    setLoading(true);
+    setError(null);
+    try {
+      await loginWithGoogle(true);
+    } catch (err: any) {
+      const msg = err.code ? formatAuthError(err.code) : err.message || 'Google redirect failed';
+      setError(msg);
+      throw new Error(msg);
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  const loginGuest = useCallback((name?: string) => {
+    setError(null);
+    const guest = loginAsGuest(name);
+    setUser(guest);
+  }, []);
+
   return {
     user,
     loading,
@@ -161,6 +186,8 @@ export function useAuth(): UseAuthReturn {
     login,
     register,
     loginGoogle,
+    loginGoogleRedirect,
+    loginGuest,
     sendOtp,
     verifyOtp,
     logout,

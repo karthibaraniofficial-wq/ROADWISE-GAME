@@ -390,6 +390,55 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, onSuccess
                 <span>Sign In with Full-Page Redirect</span>
               </button>
             )}
+
+            {error && (error.toLowerCase().includes('authorized domain') || error.toLowerCase().includes('unauthorized-domain')) && (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', marginTop: '6px' }}>
+                <a
+                  href="https://console.firebase.google.com/project/roadwise-e5b11/authentication/settings"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  style={{
+                    background: 'linear-gradient(135deg, #0284c7, #0369a1)',
+                    color: '#ffffff',
+                    border: 'none',
+                    borderRadius: '8px',
+                    padding: '8px 12px',
+                    fontSize: '12px',
+                    fontWeight: 700,
+                    textDecoration: 'none',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    gap: '6px',
+                    boxShadow: '0 2px 8px rgba(2, 132, 199, 0.3)',
+                  }}
+                >
+                  <span>🔗</span>
+                  <span>Add roadwise-game.vercel.app in Firebase Console</span>
+                </a>
+                <button
+                  type="button"
+                  onClick={handleGuestSignIn}
+                  style={{
+                    background: 'rgba(255, 255, 255, 0.08)',
+                    color: '#f8fafc',
+                    border: '1px solid rgba(255, 255, 255, 0.2)',
+                    borderRadius: '8px',
+                    padding: '8px 12px',
+                    fontSize: '12px',
+                    fontWeight: 700,
+                    cursor: 'pointer',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    gap: '6px',
+                  }}
+                >
+                  <span>🎮</span>
+                  <span>Play as Guest / Offline Rider (Instant Access)</span>
+                </button>
+              </div>
+            )}
           </div>
         )}
 

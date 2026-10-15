@@ -159,8 +159,8 @@ export function buildCity(): CityBundle {
   function createMarker(colorHex: number): THREE.Group {
     const group = new THREE.Group();
 
-    // Ground beacon cylinder ring
-    const ringGeo = new THREE.RingGeometry(1.6, 2.2, 32);
+    // Ground concentric rings (Inner & Outer)
+    const ringGeo = new THREE.RingGeometry(1.8, 2.4, 32);
     ringGeo.rotateX(-Math.PI / 2);
     const ring = new THREE.Mesh(
       ringGeo,
@@ -169,22 +169,39 @@ export function buildCity(): CityBundle {
     ring.position.y = 0.08;
     group.add(ring);
 
-    // Vertical translucent light beam column
-    const beamGeo = new THREE.CylinderGeometry(1.6, 1.6, 14, 16, 1, true);
+    // Vertical volumetric light beam reaching high into the sky (26m tall)
+    const beamGeo = new THREE.CylinderGeometry(1.4, 2.8, 26, 16, 1, true);
     const beam = new THREE.Mesh(
       beamGeo,
-      new THREE.MeshBasicMaterial({ color: colorHex, transparent: true, opacity: 0.25, side: THREE.DoubleSide })
+      new THREE.MeshBasicMaterial({
+        color: colorHex,
+        transparent: true,
+        opacity: 0.28,
+        side: THREE.DoubleSide,
+        depthWrite: false,
+      })
     );
-    beam.position.y = 7.0;
+    beam.position.y = 13.0;
     group.add(beam);
 
-    // Floating parcel/destination icon
+    // Floating rotating destination beacon gem
     const icon = new THREE.Mesh(
-      new THREE.BoxGeometry(0.85, 0.85, 0.85),
-      new THREE.MeshStandardMaterial({ color: colorHex, roughness: 0.3, metalness: 0.6 })
+      new THREE.OctahedronGeometry(0.85, 0),
+      new THREE.MeshStandardMaterial({
+        color: colorHex,
+        roughness: 0.15,
+        metalness: 0.7,
+        emissive: colorHex,
+        emissiveIntensity: 0.45,
+      })
     );
-    icon.position.y = 2.4;
+    icon.position.y = 2.5;
     group.add(icon);
+
+    // Point Light to illuminate surrounding asphalt
+    const pointLight = new THREE.PointLight(colorHex, 2.0, 16);
+    pointLight.position.y = 2.2;
+    group.add(pointLight);
 
     return group;
   }

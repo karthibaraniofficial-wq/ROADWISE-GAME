@@ -63,6 +63,9 @@ export const App: React.FC = () => {
   const [timeRemainingSeconds, setTimeRemainingSeconds] = useState(0);
   const [packageHealth, setPackageHealth] = useState(100);
   const [score, setScore] = useState(1000);
+  const [distanceMeters, setDistanceMeters] = useState(0);
+  const [isNearCheckpoint, setIsNearCheckpoint] = useState(false);
+  const lastTelemetryUpdateRef = useRef<number>(0);
   const [cameraMode, setCameraMode] = useState<CameraViewMode>('CHASE');
   const [latestViolation, setLatestViolation] = useState<ViolationEvent | null>(null);
   const [twistBanner, setTwistBanner] = useState<{ title: string; message: string } | null>(null);
@@ -126,12 +129,19 @@ export const App: React.FC = () => {
     if (screen !== 'PLAYING' || !gameContainerRef.current) return;
 
     const engine = new GameEngine(gameContainerRef.current, profile, activeMission, {
-      onTelemetryUpdate: (speed, helmet, time, health, currentScore) => {
-        setSpeedKmh(speed);
-        setIsHelmetFastened(helmet);
-        setTimeRemainingSeconds(time);
-        setPackageHealth(health);
-        setScore(currentScore);
+      onTelemetryUpdate: (speed, helmet, time, health, currentScore, dist, near) => {
+        const now = performance.now();
+        // Throttle React state updates to ~15 FPS to eliminate 60fps re-render thrashing
+        if (now - lastTelemetryUpdateRef.current > 60) {
+          lastTelemetryUpdateRef.current = now;
+          setSpeedKmh(speed);
+          setIsHelmetFastened(helmet);
+          setTimeRemainingSeconds(time);
+          setPackageHealth(health);
+          setScore(currentScore);
+          if (dist !== undefined) setDistanceMeters(dist);
+          if (near !== undefined) setIsNearCheckpoint(near);
+        }
       },
       onViolation: (violation) => {
         setLatestViolation(violation);
@@ -408,6 +418,8 @@ export const App: React.FC = () => {
             twistBanner={twistBanner}
             currencyINR={profile.currencyINR}
             syncStatus={syncStatus}
+            distanceMeters={distanceMeters}
+            isNearCheckpoint={isNearCheckpoint}
             onToggleHelmet={() => gameEngineRef.current?.toggleHelmet()}
             onToggleCamera={() => {
               setCameraMode((prev) => {

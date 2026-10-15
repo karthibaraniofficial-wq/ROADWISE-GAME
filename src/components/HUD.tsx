@@ -126,21 +126,31 @@ export const HUD: React.FC<HUDProps> = ({
             {objectiveText}
           </div>
 
-          {/* Distance Indicator if available */}
+          {/* Enhanced Distance & Destination Beacon Indicator */}
           {distanceMeters !== undefined && (
             <div
               style={{
                 fontSize: '12px',
-                color: '#94a3b8',
-                fontWeight: 600,
+                color: isNearCheckpoint ? '#34d399' : '#94a3b8',
+                fontWeight: 700,
                 marginBottom: '10px',
                 display: 'flex',
                 alignItems: 'center',
-                gap: '6px',
+                justifyContent: 'space-between',
+                background: isNearCheckpoint ? 'rgba(16, 185, 129, 0.16)' : 'rgba(255, 255, 255, 0.05)',
+                padding: '6px 10px',
+                borderRadius: '8px',
+                border: `1px solid ${isNearCheckpoint ? 'rgba(16, 185, 129, 0.45)' : 'rgba(255, 255, 255, 0.08)'}`,
+                boxShadow: isNearCheckpoint ? '0 0 16px rgba(16, 185, 129, 0.25)' : 'none',
               }}
             >
-              <span>📍 Distance:</span>
-              <strong style={{ color: '#f8fafc' }}>{Math.round(distanceMeters)}m</strong>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                <span style={{ fontSize: '13px' }}>{isNearCheckpoint ? '🎯' : '📍'}</span>
+                <span>{isNearCheckpoint ? 'CHECKPOINT REACHED' : 'TARGET DISTANCE'}</span>
+              </div>
+              <strong style={{ color: isNearCheckpoint ? '#34d399' : '#38bdf8', fontFamily: 'JetBrains Mono, monospace' }}>
+                {Math.round(distanceMeters)}m
+              </strong>
             </div>
           )}
 

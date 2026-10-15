@@ -129,31 +129,42 @@ class SoundEngine {
     this.isEngineRunning = false;
   }
 
+  // Brake squeal cooldown tracking
+  private lastBrakeSquealTime: number = 0;
+
   // --- BRAKE SQUEAL ---
   public playBrakeSqueal(): void {
     if (!this.ctx || this.isMuted) return;
-    this.resumeContext();
+    const now = performance.now();
+    if (now - this.lastBrakeSquealTime < 650) return; // Prevent 60fps oscillator flooding
+    this.lastBrakeSquealTime = now;
 
-    const osc = this.ctx.createOscillator();
-    const gain = this.ctx.createGain();
-    const filter = this.ctx.createBiquadFilter();
+    try {
+      this.resumeContext();
 
-    osc.type = 'sawtooth';
-    osc.frequency.setValueAtTime(2800 + Math.random() * 400, this.ctx.currentTime);
+      const osc = this.ctx.createOscillator();
+      const gain = this.ctx.createGain();
+      const filter = this.ctx.createBiquadFilter();
 
-    filter.type = 'bandpass';
-    filter.frequency.setValueAtTime(2900, this.ctx.currentTime);
-    filter.Q.setValueAtTime(4.0, this.ctx.currentTime);
+      osc.type = 'sawtooth';
+      osc.frequency.setValueAtTime(2800 + Math.random() * 400, this.ctx.currentTime);
 
-    gain.gain.setValueAtTime(0.08, this.ctx.currentTime);
-    gain.gain.exponentialRampToValueAtTime(0.001, this.ctx.currentTime + 0.35);
+      filter.type = 'bandpass';
+      filter.frequency.setValueAtTime(2900, this.ctx.currentTime);
+      filter.Q.setValueAtTime(4.0, this.ctx.currentTime);
 
-    osc.connect(filter);
-    filter.connect(gain);
-    if (this.masterGain) gain.connect(this.masterGain);
+      gain.gain.setValueAtTime(0.08, this.ctx.currentTime);
+      gain.gain.exponentialRampToValueAtTime(0.001, this.ctx.currentTime + 0.35);
 
-    osc.start();
-    osc.stop(this.ctx.currentTime + 0.35);
+      osc.connect(filter);
+      filter.connect(gain);
+      if (this.masterGain) gain.connect(this.masterGain);
+
+      osc.start();
+      osc.stop(this.ctx.currentTime + 0.35);
+    } catch {
+      // Audio node allocation catch
+    }
   }
 
   // --- HORN SOUND (Classic Scooter Dual-Tone) ---

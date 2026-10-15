@@ -1,6 +1,6 @@
 // ROADWISE — useAuth React Hook
 import { useState, useEffect, useCallback } from 'react';
-import { AuthUser } from '../types/game';
+import type { AuthUser } from '../types/game';
 import {
   subscribeToAuthState,
   loginPlayer,

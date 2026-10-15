@@ -17,7 +17,15 @@ import { TrafficRuleEngine, PlayerTelemetry } from './TrafficRuleEngine';
 import { TrafficAIManager } from './TrafficAI';
 
 export interface GameEngineCallbacks {
-  onTelemetryUpdate: (speedKmh: number, helmet: boolean, timeRemaining: number, packageHealth: number, score: number) => void;
+  onTelemetryUpdate: (
+    speedKmh: number,
+    helmet: boolean,
+    timeRemaining: number,
+    packageHealth: number,
+    score: number,
+    distanceMeters?: number,
+    isNearCheckpoint?: boolean
+  ) => void;
   onViolation: (event: ViolationEvent) => void;
   onMissionStatusChange: (state: ActiveMissionState) => void;
   onTwistEvent: (title: string, message: string) => void;
@@ -55,9 +63,37 @@ export class GameEngine {
   private cachedRouteWaypoints: [number, number][] = [];
   private lastRouteCalcTime: number = 0;
 
-  // Natural lighting
+  // Natural lighting & atmospheric visual assets
   private sunLight: THREE.DirectionalLight | null = null;
   private ambientLight: THREE.AmbientLight | null = null;
+  private hemiLight: THREE.HemisphereLight | null = null;
+  private bikeHeadlight: THREE.SpotLight | null = null;
+  private navArrow: THREE.Group | null = null;
+
+  private createNavArrow(): THREE.Group {
+    const group = new THREE.Group();
+    // 3D Holographic GPS Navigation Arrow hovering above player
+    const arrowGeo = new THREE.ConeGeometry(0.36, 1.1, 16);
+    arrowGeo.rotateX(Math.PI / 2); // Point forward along Z
+    const arrowMat = new THREE.MeshStandardMaterial({
+      color: 0x10b981,
+      emissive: 0x10b981,
+      emissiveIntensity: 0.65,
+      roughness: 0.2,
+      metalness: 0.8,
+    });
+    const arrow = new THREE.Mesh(arrowGeo, arrowMat);
+    arrow.position.z = 0.45;
+    group.add(arrow);
+
+    const shaftGeo = new THREE.CylinderGeometry(0.12, 0.12, 0.65, 12);
+    shaftGeo.rotateX(Math.PI / 2);
+    const shaft = new THREE.Mesh(shaftGeo, arrowMat);
+    shaft.position.z = -0.25;
+    group.add(shaft);
+
+    return group;
+  }
 
   constructor(
     container: HTMLElement,
@@ -88,13 +124,16 @@ export class GameEngine {
   }
 
   private init(): void {
-    // 1. Renderer Setup
+    // 1. Renderer Setup with AAA Tone Mapping & Color Management
     try {
       this.renderer = new THREE.WebGLRenderer({ antialias: true, powerPreference: 'high-performance' });
       this.renderer.setSize(this.container.clientWidth, this.container.clientHeight);
       this.renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2.0));
       this.renderer.shadowMap.enabled = true;
       this.renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+      this.renderer.toneMapping = THREE.ACESFilmicToneMapping;
+      this.renderer.toneMappingExposure = 1.12;
+      this.renderer.outputColorSpace = THREE.SRGBColorSpace;
       this.container.appendChild(this.renderer.domElement);
     } catch (e) {
       console.error('WebGL initialization failure:', e);
@@ -155,6 +194,18 @@ export class GameEngine {
     this.vehicleMesh = createVehicleModel(this.profile.selectedVehicleId, colorHex);
     this.scene.add(this.vehicleMesh.root);
 
+    // Motorcycle Dynamic Headlight Spotlight
+    this.bikeHeadlight = new THREE.SpotLight(0xfffbeb, 2.8, 42, Math.PI / 4.8, 0.65, 1.2);
+    this.bikeHeadlight.castShadow = true;
+    this.bikeHeadlight.shadow.mapSize.width = 512;
+    this.bikeHeadlight.shadow.mapSize.height = 512;
+    this.scene.add(this.bikeHeadlight);
+    this.scene.add(this.bikeHeadlight.target);
+
+    // 3D Floating Holographic GPS Waypoint Arrow
+    this.navArrow = this.createNavArrow();
+    this.scene.add(this.navArrow);
+
     // 7. Update checkpoint marker positions
     this.updateMarkerPositions();
 
@@ -174,25 +225,40 @@ export class GameEngine {
 
   private setupLighting(): void {
     const isNight = this.activeMission.weather === 'NIGHT';
+    const isRain = this.activeMission.weather === 'MONSOON_RAIN';
 
-    this.scene.background = new THREE.Color(isNight ? 0x070b14 : 0x87ceeb);
-    this.scene.fog = new THREE.FogExp2(isNight ? 0x070b14 : 0xcfe2f3, isNight ? 0.012 : 0.005);
+    const skyColor = isNight ? 0x050811 : isRain ? 0x334155 : 0x87ceeb;
+    const fogColor = isNight ? 0x050811 : isRain ? 0x475569 : 0xbae6fd;
+    const fogDensity = isNight ? 0.012 : isRain ? 0.009 : 0.0035;
 
-    this.ambientLight = new THREE.AmbientLight(isNight ? 0x1e293b : 0xffffff, isNight ? 0.35 : 0.7);
-    this.scene.add(this.ambientLight);
+    this.scene.background = new THREE.Color(skyColor);
+    this.scene.fog = new THREE.FogExp2(fogColor, fogDensity);
 
-    this.sunLight = new THREE.DirectionalLight(isNight ? 0x38bdf8 : 0xfffbeb, isNight ? 0.4 : 1.2);
-    this.sunLight.position.set(60, 90, 40);
+    // Ambient Hemisphere Light (Sky bounce + Ground reflection)
+    this.hemiLight = new THREE.HemisphereLight(
+      isNight ? 0x1e293b : isRain ? 0x94a3b8 : 0x7dd3fc,
+      isNight ? 0x090d16 : 0x334155,
+      isNight ? 0.4 : isRain ? 0.7 : 0.85
+    );
+    this.scene.add(this.hemiLight);
+
+    // Primary Directional Sun / Moon Light
+    this.sunLight = new THREE.DirectionalLight(
+      isNight ? 0x38bdf8 : isRain ? 0xbfdbfe : 0xfff7ed,
+      isNight ? 0.35 : isRain ? 0.85 : 1.35
+    );
+    this.sunLight.position.set(65, 95, 45);
     this.sunLight.castShadow = !isNight;
     this.sunLight.shadow.mapSize.width = 1024;
     this.sunLight.shadow.mapSize.height = 1024;
     this.sunLight.shadow.camera.near = 10;
-    this.sunLight.shadow.camera.far = 250;
-    const d = 90;
+    this.sunLight.shadow.camera.far = 260;
+    const d = 95;
     this.sunLight.shadow.camera.left = -d;
     this.sunLight.shadow.camera.right = d;
     this.sunLight.shadow.camera.top = d;
     this.sunLight.shadow.camera.bottom = -d;
+    this.sunLight.shadow.bias = -0.0005;
     this.scene.add(this.sunLight);
   }
 
@@ -327,10 +393,16 @@ export class GameEngine {
       this.city.updateSignals(delta);
       this.city.updateRain(delta);
 
-      // Marker pulsing animations
+      // Safe Marker pulsing animations
       const bob = Math.sin(now * 0.004) * 0.3;
-      this.city.pickupMarker.children[2].position.y = 2.4 + bob;
-      this.city.dropoffMarker.children[2].position.y = 2.4 + bob;
+      if (this.city.pickupMarker.children[2]) {
+        this.city.pickupMarker.children[2].position.y = 2.5 + bob;
+        this.city.pickupMarker.children[2].rotation.y += delta * 1.6;
+      }
+      if (this.city.dropoffMarker.children[2]) {
+        this.city.dropoffMarker.children[2].position.y = 2.5 + bob;
+        this.city.dropoffMarker.children[2].rotation.y += delta * 1.6;
+      }
     }
 
     // 3. Traffic AI & Pedestrians
@@ -366,6 +438,53 @@ export class GameEngine {
         );
       }
 
+      // Sync Headlight with Motorcycle position and heading
+      if (this.bikeHeadlight) {
+        const yaw = this.physics.yaw;
+        const hx = this.physics.position.x + Math.sin(yaw) * 0.6;
+        const hz = this.physics.position.z + Math.cos(yaw) * 0.6;
+        this.bikeHeadlight.position.set(hx, this.physics.position.y + 0.95, hz);
+        this.bikeHeadlight.target.position.set(
+          hx + Math.sin(yaw) * 22,
+          0.1,
+          hz + Math.cos(yaw) * 22
+        );
+      }
+
+      // Compute Distance to Current Target Checkpoint
+      const currentTarget = !this.missionState.isPickupComplete
+        ? this.activeMission.pickupPos
+        : this.activeMission.dropoffLocations[this.missionState.currentDropoffIndex];
+
+      const distanceMeters = currentTarget
+        ? Math.hypot(this.physics.position.x - currentTarget[0], this.physics.position.z - currentTarget[2])
+        : 0;
+      const isNearCheckpoint = distanceMeters <= 5.0;
+
+      // Update 3D Holographic Waypoint Arrow
+      if (this.navArrow && currentTarget) {
+        const arrowBob = Math.sin(now * 0.006) * 0.12;
+        this.navArrow.position.set(
+          this.physics.position.x,
+          this.physics.position.y + 1.85 + arrowBob,
+          this.physics.position.z
+        );
+        const targetAngle = Math.atan2(
+          currentTarget[0] - this.physics.position.x,
+          currentTarget[2] - this.physics.position.z
+        );
+        this.navArrow.rotation.y = targetAngle;
+
+        // Change color based on stage: Emerald Green (Pickup) vs Amber Gold (Delivery)
+        const arrowMesh = this.navArrow.children[0] as THREE.Mesh;
+        if (arrowMesh && (arrowMesh.material as THREE.MeshStandardMaterial)) {
+          const mat = arrowMesh.material as THREE.MeshStandardMaterial;
+          const targetColor = !this.missionState.isPickupComplete ? 0x10b981 : 0xf59e0b;
+          mat.color.setHex(targetColor);
+          mat.emissive.setHex(targetColor);
+        }
+      }
+
       // 5. Update Camera Follow
       this.updateCamera(delta);
 
@@ -378,13 +497,15 @@ export class GameEngine {
       // 7. Logical Twists Event Triggering
       this.evaluateTwists();
 
-      // UI Telemetry Callback
+      // UI Telemetry Callback with Distance & Checkpoint Proximity
       this.callbacks.onTelemetryUpdate(
         this.physics.speedKmh,
         this.physics.isHelmetFastened,
         Math.max(0, Math.ceil(this.missionState.timeRemainingSeconds)),
         this.missionState.packageHealth,
-        this.missionState.score
+        this.missionState.score,
+        distanceMeters,
+        isNearCheckpoint
       );
     }
 

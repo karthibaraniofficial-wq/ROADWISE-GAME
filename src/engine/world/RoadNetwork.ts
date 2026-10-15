@@ -747,85 +747,98 @@ export class RoadNetwork {
    * Returns a smooth list of points following the actual roads.
    */
   public findPath(startPos: [number, number], endPos: [number, number]): THREE.Vector3[] {
-    const startNode = this.findClosestNode(startPos[0], startPos[1]);
-    const endNode = this.findClosestNode(endPos[0], endPos[1]);
+    try {
+      const startNode = this.findClosestNode(startPos[0], startPos[1]);
+      const endNode = this.findClosestNode(endPos[0], endPos[1]);
 
-    if (startNode.id === endNode.id) {
-      return [
-        new THREE.Vector3(startPos[0], 0, startPos[1]),
-        new THREE.Vector3(endPos[0], 0, endPos[1]),
-      ];
-    }
-
-    // Priority queue / frontier for A*
-    const openSet: Set<string> = new Set([startNode.id]);
-    const cameFrom: Map<string, { nodeId: string; edgeId: string }> = new Map();
-
-    const gScore: Map<string, number> = new Map();
-    gScore.set(startNode.id, 0);
-
-    const fScore: Map<string, number> = new Map();
-    fScore.set(startNode.id, startNode.pos.distanceTo(endNode.pos));
-
-    while (openSet.size > 0) {
-      // Find node with lowest fScore
-      let currentId = '';
-      let lowestF = Infinity;
-      for (const id of openSet) {
-        const f = fScore.get(id) ?? Infinity;
-        if (f < lowestF) {
-          lowestF = f;
-          currentId = id;
-        }
+      if (!startNode || !endNode || startNode.id === endNode.id) {
+        return [
+          new THREE.Vector3(startPos[0], 0, startPos[1]),
+          new THREE.Vector3(endPos[0], 0, endPos[1]),
+        ];
       }
 
-      if (currentId === endNode.id) {
-        // Reconstruct path
-        const fullPoints: THREE.Vector3[] = [];
-        let curr = endNode.id;
-        const segmentEdges: RoadEdge[] = [];
+      // Priority queue / frontier for A*
+      const openSet: Set<string> = new Set([startNode.id]);
+      const cameFrom: Map<string, { nodeId: string; edgeId: string }> = new Map();
 
-        while (cameFrom.has(curr)) {
-          const step = cameFrom.get(curr)!;
-          const edge = this.edges.get(step.edgeId);
-          if (edge) segmentEdges.unshift(edge);
-          curr = step.nodeId;
+      const gScore: Map<string, number> = new Map();
+      gScore.set(startNode.id, 0);
+
+      const fScore: Map<string, number> = new Map();
+      fScore.set(startNode.id, startNode.pos.distanceTo(endNode.pos));
+
+      let iterations = 0;
+      const maxIterations = 300; // Protect against search stalls
+
+      while (openSet.size > 0 && iterations++ < maxIterations) {
+        // Find node with lowest fScore
+        let currentId = '';
+        let lowestF = Infinity;
+        for (const id of openSet) {
+          const f = fScore.get(id) ?? Infinity;
+          if (f < lowestF) {
+            lowestF = f;
+            currentId = id;
+          }
         }
 
-        fullPoints.push(new THREE.Vector3(startPos[0], 0, startPos[1]));
+        if (currentId === endNode.id) {
+          // Reconstruct path
+          const fullPoints: THREE.Vector3[] = [];
+          let curr = endNode.id;
+          const segmentEdges: RoadEdge[] = [];
 
-        for (const edge of segmentEdges) {
-          const pts = edge.curve.getPoints(8);
-          fullPoints.push(...pts);
+          while (cameFrom.has(curr)) {
+            const step = cameFrom.get(curr)!;
+            const edge = this.edges.get(step.edgeId);
+            if (edge) segmentEdges.unshift(edge);
+            curr = step.nodeId;
+          }
+
+          fullPoints.push(new THREE.Vector3(startPos[0], 0, startPos[1]));
+
+          for (const edge of segmentEdges) {
+            try {
+              const pts = edge.curve.getPoints(8);
+              fullPoints.push(...pts);
+            } catch {
+              fullPoints.push(new THREE.Vector3(edge.curve.v0.x, 0, edge.curve.v0.y));
+            }
+          }
+
+          fullPoints.push(new THREE.Vector3(endPos[0], 0, endPos[1]));
+          return fullPoints;
         }
 
-        fullPoints.push(new THREE.Vector3(endPos[0], 0, endPos[1]));
-        return fullPoints;
+        openSet.delete(currentId);
+        const currentNode = this.nodes.get(currentId);
+        if (!currentNode) continue;
+
+        const currentG = gScore.get(currentId) ?? Infinity;
+
+        for (const edgeId of currentNode.connections) {
+          const edge = this.edges.get(edgeId);
+          if (!edge) continue;
+
+          // One-way restriction: cannot traverse against one-way flow
+          if (edge.isOneWay && edge.fromNodeId !== currentId) continue;
+
+          const neighborId = edge.fromNodeId === currentId ? edge.toNodeId : edge.fromNodeId;
+          const neighborNode = this.nodes.get(neighborId);
+          if (!neighborNode) continue;
+
+          const tentativeG = currentG + edge.length;
+          if (tentativeG < (gScore.get(neighborId) ?? Infinity)) {
+            cameFrom.set(neighborId, { nodeId: currentId, edgeId });
+            gScore.set(neighborId, tentativeG);
+            fScore.set(neighborId, tentativeG + neighborNode.pos.distanceTo(endNode.pos));
+            openSet.add(neighborId);
+          }
+        }
       }
-
-      openSet.delete(currentId);
-      const currentNode = this.nodes.get(currentId)!;
-      const currentG = gScore.get(currentId) ?? Infinity;
-
-      for (const edgeId of currentNode.connections) {
-        const edge = this.edges.get(edgeId);
-        if (!edge) continue;
-
-        // One-way restriction: cannot traverse against one-way flow
-        if (edge.isOneWay && edge.fromNodeId !== currentId) continue;
-
-        const neighborId = edge.fromNodeId === currentId ? edge.toNodeId : edge.fromNodeId;
-        const neighborNode = this.nodes.get(neighborId);
-        if (!neighborNode) continue;
-
-        const tentativeG = currentG + edge.length;
-        if (tentativeG < (gScore.get(neighborId) ?? Infinity)) {
-          cameFrom.set(neighborId, { nodeId: currentId, edgeId });
-          gScore.set(neighborId, tentativeG);
-          fScore.set(neighborId, tentativeG + neighborNode.pos.distanceTo(endNode.pos));
-          openSet.add(neighborId);
-        }
-      }
+    } catch (e) {
+      console.warn('[ROADWISE] Pathfinding note:', e);
     }
 
     // Fallback: direct line if no graph path found

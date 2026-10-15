@@ -143,39 +143,106 @@ export const Minimap: React.FC<MinimapProps> = ({
         ctx.setLineDash([]);
       }
 
-      // Destination Beacon
+      // Destination Beacon & Off-screen Edge-Clamped Tracking Pointer
       const targetPos = !isPickupComplete ? data.pickupPos : data.dropoffPos;
-      if (targetPos) {
-        const tx = (targetPos[0] - px) * scale;
-        const tz = (targetPos[1] - pz) * scale;
-        const pulse = Math.sin(Date.now() * 0.007) * 3;
-        ctx.beginPath();
-        ctx.arc(tx, tz, 7 + pulse, 0, Math.PI * 2);
-        ctx.strokeStyle = !isPickupComplete ? '#10b981' : '#f59e0b';
-        ctx.lineWidth = 2;
-        ctx.stroke();
+      if (targetPos && typeof targetPos[0] === 'number' && typeof targetPos[1] === 'number') {
+        const dx = targetPos[0] - px;
+        const dz = targetPos[1] - pz;
+        const distWorld = Math.hypot(dx, dz);
+        const beaconColor = !isPickupComplete ? '#10b981' : '#f59e0b';
 
-        ctx.beginPath();
-        ctx.arc(tx, tz, 3.5, 0, Math.PI * 2);
-        ctx.fillStyle = !isPickupComplete ? '#10b981' : '#f59e0b';
-        ctx.fill();
+        const maxRadius = (size / 2) - 14;
+        const screenDist = distWorld * scale;
+
+        if (screenDist > maxRadius) {
+          // Off-screen: Clamp pointer to radar perimeter with distance readout
+          const angle = Math.atan2(dz, dx);
+          const edgeX = Math.cos(angle) * maxRadius;
+          const edgeZ = Math.sin(angle) * maxRadius;
+
+          ctx.save();
+          ctx.translate(edgeX, edgeZ);
+          ctx.rotate(angle);
+
+          // Pulsing chevron pointing towards the destination
+          const pulse = Math.sin(Date.now() * 0.009) * 1.5;
+          ctx.beginPath();
+          ctx.moveTo(7 + pulse, 0);
+          ctx.lineTo(-5, -6);
+          ctx.lineTo(-2, 0);
+          ctx.lineTo(-5, 6);
+          ctx.closePath();
+          ctx.fillStyle = beaconColor;
+          ctx.fill();
+          ctx.strokeStyle = '#ffffff';
+          ctx.lineWidth = 1.2;
+          ctx.stroke();
+
+          ctx.restore();
+
+          // Distance badge near perimeter
+          ctx.save();
+          ctx.font = 'bold 8.5px "JetBrains Mono", monospace';
+          const distText = `${Math.round(distWorld)}m`;
+          const textX = Math.cos(angle) * (maxRadius - 13);
+          const textZ = Math.sin(angle) * (maxRadius - 13);
+          const textW = ctx.measureText(distText).width;
+          ctx.fillStyle = 'rgba(15, 23, 42, 0.88)';
+          ctx.fillRect(textX - textW / 2 - 2, textZ - 5, textW + 4, 10);
+          ctx.fillStyle = beaconColor;
+          ctx.textAlign = 'center';
+          ctx.textBaseline = 'middle';
+          ctx.fillText(distText, textX, textZ);
+          ctx.restore();
+        } else {
+          // On-screen: Draw glowing pulsating rings and core marker
+          const tx = dx * scale;
+          const tz = dz * scale;
+          const pulse = Math.sin(Date.now() * 0.007) * 4;
+
+          ctx.beginPath();
+          ctx.arc(tx, tz, 8 + pulse, 0, Math.PI * 2);
+          ctx.strokeStyle = beaconColor;
+          ctx.lineWidth = 2.2;
+          ctx.stroke();
+
+          ctx.beginPath();
+          ctx.arc(tx, tz, 4.5, 0, Math.PI * 2);
+          ctx.fillStyle = '#ffffff';
+          ctx.fill();
+
+          ctx.beginPath();
+          ctx.arc(tx, tz, 3, 0, Math.PI * 2);
+          ctx.fillStyle = beaconColor;
+          ctx.fill();
+        }
       }
 
       // AI Cars
-      for (const car of data.aiCars) {
+      for (const car of (data.aiCars || [])) {
+        if (!car || !car.pos) continue;
         const cx = (car.pos[0] - px) * scale;
         const cz = (car.pos[1] - pz) * scale;
         ctx.fillStyle = car.isAmbulance ? (Date.now() % 400 < 200 ? '#ef4444' : '#38bdf8') : '#94a3b8';
         ctx.fillRect(cx - 3, cz - 3, 6, 6);
       }
 
-      // Player Arrow
+      // Player Location Arrow
       ctx.restore();
       ctx.save();
       ctx.translate(size / 2, size / 2);
+
+      // Subtle player pulse beacon
+      const playerPulse = (Math.sin(Date.now() * 0.006) + 1) * 2;
+      ctx.beginPath();
+      ctx.arc(0, 0, 7 + playerPulse, 0, Math.PI * 2);
+      ctx.strokeStyle = 'rgba(56, 189, 248, 0.35)';
+      ctx.lineWidth = 1.2;
+      ctx.stroke();
+
       ctx.rotate(-data.playerHeading);
       ctx.beginPath();
-      ctx.moveTo(0, -8);
+      ctx.moveTo(0, -9);
       ctx.lineTo(6, 6);
       ctx.lineTo(0, 3);
       ctx.lineTo(-6, 6);
@@ -183,13 +250,13 @@ export const Minimap: React.FC<MinimapProps> = ({
       ctx.fillStyle = '#38bdf8';
       ctx.fill();
       ctx.strokeStyle = '#ffffff';
-      ctx.lineWidth = 1.5;
+      ctx.lineWidth = 1.8;
       ctx.stroke();
       ctx.restore();
 
-      ctx.fillStyle = 'rgba(255, 255, 255, 0.8)';
-      ctx.font = '10px "JetBrains Mono", monospace';
-      ctx.fillText('N', size / 2 - 3, 14);
+      ctx.fillStyle = 'rgba(255, 255, 255, 0.85)';
+      ctx.font = 'bold 10px "JetBrains Mono", monospace';
+      ctx.fillText('N', size / 2 - 4, 14);
 
       animId = requestAnimationFrame(renderMini);
     };
@@ -345,16 +412,23 @@ export const Minimap: React.FC<MinimapProps> = ({
     return () => cancelAnimationFrame(animId);
   }, [isExpanded, getMinimapData, isPickupComplete]);
 
-  // Compute live distance along route
-  const currentData = getMinimapData();
-  const routePoints = currentData.routeWaypoints || [];
+  // Compute live distance along route safely
   let routeDistMeters = 0;
-  for (let i = 1; i < routePoints.length; i++) {
-    const dx = routePoints[i][0] - routePoints[i - 1][0];
-    const dz = routePoints[i][1] - routePoints[i - 1][1];
-    routeDistMeters += Math.hypot(dx, dz);
+  let estSeconds = 15;
+  try {
+    const currentData = getMinimapData();
+    const routePoints = currentData?.routeWaypoints || [];
+    for (let i = 1; i < routePoints.length; i++) {
+      const dx = routePoints[i][0] - routePoints[i - 1][0];
+      const dz = routePoints[i][1] - routePoints[i - 1][1];
+      routeDistMeters += Math.hypot(dx, dz);
+    }
+    if (routeDistMeters > 0) {
+      estSeconds = Math.max(1, Math.round(routeDistMeters / 9.5));
+    }
+  } catch {
+    // Graceful fallback
   }
-  const estSeconds = Math.max(1, Math.round(routeDistMeters / 9.5));
 
   return (
     <>
